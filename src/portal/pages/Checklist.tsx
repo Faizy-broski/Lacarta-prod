@@ -39,9 +39,9 @@ export default function Checklist() {
         className="relative w-full"
         style={{ minHeight: 240, backgroundColor: "#e8534a" }}
       >
-        <div className="relative z-10 px-10 md:px-20 py-12 flex items-start gap-6">
+        <div className="relative z-10 px-4 md:px-20 py-8 md:py-12 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
           {/* Clipboard SVG */}
-          <svg width="72" height="72" viewBox="0 0 64 64" fill="none" style={{ flexShrink: 0, marginTop: 4 }}>
+          <svg className="w-12 h-12 sm:w-[72px] sm:h-[72px] flex-shrink-0" viewBox="0 0 64 64" fill="none">
             <rect x="12" y="14" width="40" height="44" rx="4" stroke="#000" strokeWidth="2.2" fill="none" />
             <rect x="22" y="8" width="20" height="12" rx="3" stroke="#000" strokeWidth="2.2" fill="none" />
             <line x1="22" y1="28" x2="42" y2="28" stroke="#000" strokeWidth="2.2" strokeLinecap="round" />
@@ -143,7 +143,7 @@ export default function Checklist() {
       <div className="px-4 md:px-10 py-14 pb-20 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12">
 
         {/* Sidebar */}
-        <aside className="self-start sticky top-8">
+        <aside className="hidden md:block self-start sticky top-8">
           <p className="font-black text-base mb-5 uppercase" style={{ color: "#000" }}>
             Cartagena Travel Checklist
           </p>

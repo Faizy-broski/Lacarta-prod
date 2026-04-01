@@ -110,8 +110,9 @@ export default function EventCalendar() {
       <div className="relative w-full overflow-hidden" style={{ minHeight: 340 }}>
         <img src="/lacarta_images/music-4.jpg" alt="Cartagena Events" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ backgroundColor: "rgba(140,20,10,0.72)" }} />
-        <div className="relative z-10 px-6 md:px-16 py-16 flex items-start gap-6">
-          <Calendar size={72} strokeWidth={1.4} style={{ color: "#fff", flexShrink: 0, marginTop: 4 }} />
+        <div className="relative z-10 px-4 md:px-16 py-10 md:py-16 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+          <Calendar size={48} strokeWidth={1.4} className="sm:hidden flex-shrink-0" style={{ color: "#fff" }} />
+          <Calendar size={72} strokeWidth={1.4} className="hidden sm:block flex-shrink-0" style={{ color: "#fff", marginTop: 4 }} />
           <div>
             <h1
               className="font-antigua font-black uppercase"

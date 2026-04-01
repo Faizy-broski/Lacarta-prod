@@ -6,7 +6,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@public/components/ui/accordion";
-import CartagenaNews from "@public/components/layout/cartagenaNews";
 import Link from "next/link";
 import {
   Heart,
@@ -384,7 +383,7 @@ export default function RealEstateDetails() {
               Home /{" "}
             </Link>
             <Link
-              href="/realState"
+              href="/real-estate"
               className="hover:text-amber-500 text-sky-500 transition"
             >
               Real Estate / Listing
@@ -392,7 +391,7 @@ export default function RealEstateDetails() {
             / <span className="text-gray-400">Market habitats locatifs</span>
           </p>
           <Link
-            href="/realState"
+            href="/real-estate"
             className="block text-xs text-gray-500 font-semibold mb-10"
           >
             &lsaquo; Back to Real Estate
@@ -1449,7 +1448,6 @@ export default function RealEstateDetails() {
       </div>
 
       {/* ══ NEWSLETTER ══ */}
-      <CartagenaNews />
       {/* <div
         className="relative py-14 md:py-20 px-4 sm:px-6 md:px-10 overflow-hidden"
         style={{

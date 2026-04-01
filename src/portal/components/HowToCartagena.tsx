@@ -1,13 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@public/components/ui/card";
 import { ChevronRight } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@public/components/ui/avatar";
-import { Badge } from "@public/components/ui/badge";
-import { Button } from "@public/components/ui/button";
 // import img7 from "../assets/Six-C-img1.png";
 // import img8 from "../assets/Six-C-img2.png";
 // import img9 from "../assets/Six-C-img3.png";
@@ -17,37 +8,37 @@ const cards = [
   {
     category: "BEACH",
     title: "Where to find the Best Exchange Rates",
-    description:
-      "Don’t Exchange Money at the Airport! Here are the best places to find ATMs & currency exchange in Cartagena.",
+    description: "Don’t Exchange Money at the Airport! Here are the best places to find ATMs & Currency exchange in Cartagena.",
     author: "May",
-    color: "bg-gradient-to-r from-gold to-gold-light",
+    avatar: "/lacarta_images/Maria Moreno.webp",
+    badgeBg: "#f5c542",
     image: "/images/Six-C-img1.png",
   },
   {
     category: "CULTURE",
     title: "Is Cartagena a Safe City to Visit?",
-    description:
-      "Cartagena is very friendly but sometimes you will encounter scammers. Here is what to do & how to stay safe.",
+    description: "Cartagena is very friendly but some times you will encounter scammers. Here is what to do avoid and how to stay safe.",
     author: "Miguel",
-    color: "bg-gradient-to-r from-red to-red-light",
+    avatar: "/lacarta_images/Miguel LaLibertad.webp",
+    badgeBg: "#e8534a",
     image: "/images/Six-C-img2.png",
   },
   {
     category: "CULTURE",
     title: "The Best Monuments and Statues of Cartagena, Colombia",
-    description:
-      "Here are some of the most famous statues of Cartagena and recognizable monuments from Cartagena.",
+    description: "Here are some of the most famous statues of Cartagena and recognizable monuments from Cartagena.",
     author: "Luz",
-    color: "bg-gradient-to-r from-red to-red-light",
+    avatar: "/lacarta_images/Isabella-Castillo.png",
+    badgeBg: "#e8534a",
     image: "/images/Six-C-img3.png",
   },
   {
-    category: "ACTIVITIES",
+    category: "ACTIVITES",
     title: "How to order taxis in Cartagena",
-    description:
-      "Are Taxis Safe in Colombia? Find out in our step by step guide on how to order taxis in Cartagena.",
+    description: "Are Taxis Safe in Colombia? Find out in our step by step guide on how to order taxis in Cartagena.",
     author: "Alejandra",
-    color: "bg-gradient-to-r from-green to-green-light",
+    avatar: "/lacarta_images/Alejandra-Quiroga.png",
+    badgeBg: "#4caf74",
     image: "/images/Six-C-img4.png",
   },
 ];
@@ -65,56 +56,50 @@ export default function HowToDoCartagena() {
         {/* Title */}
 
         {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
           {cards.map((card, index) => (
-            <Card
+            <div
               key={index}
-              className="overflow-hidden relative rounded-md shadow-2xl flex flex-col h-full"
+              className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col h-full"
             >
-              {/* Image */}
-              <CardHeader className="p-0 relative overflow-hidden">
+              {/* Image + badge */}
+              <div className="relative">
                 <img
                   src={card.image}
                   alt={card.title}
-                  className="h-48 w-full object-cover rounded-md"
+                  className="h-48 w-full object-cover"
                 />
-
-                {/* Badge */}
-                <Badge
-                  className={`absolute -top-2 right-0 py-2 px-auto text-xs mx-auto w-24 flex items-center justify-center text-center overflow-hidden  text-white rounded-tr-md rounded-bl-none rounded-tl-none rounded-br-none border-0 ${card.color}`}
+                <span
+                  className="absolute top-0 right-0 text-white text-xs font-bold px-3 py-2 rounded-bl-xl"
+                  style={{ backgroundColor: card.badgeBg }}
                 >
                   {card.category}
-                </Badge>
-              </CardHeader>
+                </span>
+              </div>
 
               {/* Content */}
-              <CardContent className="p-4">
-                <h3 className="font-bold text-black leading-tight text-lg mb-2">
+              <div className="p-4 flex flex-col flex-1">
+                <h3 className="font-bold text-black leading-tight text-base mb-2">
                   {card.title}
                 </h3>
-
-                {/* Auto-adjusting paragraph */}
-                <p className="text-xs text-gray-500 leading-relaxed  mb-3">
+                <p className="text-sm text-gray-500 leading-relaxed mb-3 flex-1">
                   {card.description}
                 </p>
-
-                {/* Button always aligned */}
-                <Button className="text-sm font-medium p-0 text-gray-500 bg-background hover:underline ">
+                <button className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-black transition mb-4">
                   Read More <ChevronRight className="w-4 h-4" />
-                </Button>
-              </CardContent>
+                </button>
 
-              {/* Footer stays at bottom */}
-              <CardFooter className="px-4 flex items-center gap-2  mt-auto">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/images/avatar.png" />
-                  <AvatarFallback>{card.author[0]}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm fw-bold text-black">
-                  {card.author}
-                </span>
-              </CardFooter>
-            </Card>
+                {/* Author */}
+                <div className="flex items-center gap-2 border-t pt-3">
+                  <img
+                    src={card.avatar}
+                    alt={card.author}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  <span className="text-sm font-semibold text-black">{card.author}</span>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </section>

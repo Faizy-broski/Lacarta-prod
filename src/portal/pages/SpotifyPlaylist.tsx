@@ -33,8 +33,9 @@ export default function SpotifyPlaylist() {
       <div className="relative w-full overflow-hidden" style={{ minHeight: 340 }}>
         <img src="/lacarta_images/music-3.jpg" alt="Cartagena Music" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ backgroundColor: "rgba(0,100,90,0.72)" }} />
-        <div className="relative z-10 px-6 md:px-16 py-16 flex items-start gap-6">
-          <Music2 size={72} strokeWidth={1.4} style={{ color: "#fff", flexShrink: 0, marginTop: 4 }} />
+        <div className="relative z-10 px-4 md:px-16 py-10 md:py-16 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+          <Music2 size={48} strokeWidth={1.4} className="sm:hidden flex-shrink-0" style={{ color: "#fff" }} />
+          <Music2 size={72} strokeWidth={1.4} className="hidden sm:block flex-shrink-0" style={{ color: "#fff", marginTop: 4 }} />
           <div>
             <h1
               className="font-antigua font-black uppercase"
@@ -111,7 +112,7 @@ export default function SpotifyPlaylist() {
       <div className="px-4 md:px-10 pb-20 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12">
 
         {/* Sidebar */}
-        <aside className="self-start sticky top-8">
+        <aside className="hidden md:block self-start sticky top-8">
           <p className="font-black text-base mb-4" style={{ color: "#000" }}>Cartagena its Music and Festivals</p>
           <ul className="space-y-3">
             {sidebarLinks.map((link, i) => (

@@ -6,7 +6,6 @@ import {
   AccordionTrigger,
 } from "@public/components/ui/accordion";
 import { Card, CardContent } from "@public/components/ui/card";
-import CartagenaNews from "@public/components/layout/cartagenaNews";
 import Link from "next/link";
 import {
   Shell,
@@ -260,7 +259,7 @@ const tagRoutes = {
   Beaches: "/Beaches",
   Accommodations: "/hotels",
   Boating: "/Boating",
-  "Real Estate": "/realState",
+  "Real Estate": "/real-estate",
   Activities: "/Activities",
   Gastronomy: "/Gastronomy",
 };
@@ -1695,7 +1694,6 @@ export default function DetailedHotel() {
       </section>
 
       {/* ══ SECTION 9: NEWSLETTER (Activity-specific, from image 2) ══ */}
-      <CartagenaNews />
       {/* <div
                          className="relative py-14 md:py-20 px-4 sm:px-6 md:px-10 lg:px-12 overflow-hidden"
                          style={{

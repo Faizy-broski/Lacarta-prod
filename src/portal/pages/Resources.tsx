@@ -219,7 +219,7 @@ export default function Resources() {
       <div className="px-4 md:px-10 pb-20 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12">
 
         {/* Sidebar */}
-        <aside className="self-start sticky top-8">
+        <aside className="hidden md:block self-start sticky top-8">
           <p className="font-black text-base mb-4" style={{ color: "#000" }}>On This Page</p>
           <ul className="space-y-3">
             {onThisPage.map((item) => (

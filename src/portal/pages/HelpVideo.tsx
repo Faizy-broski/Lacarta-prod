@@ -34,9 +34,9 @@ export default function HelpVideo() {
         style={{ minHeight: 240, backgroundColor: "#b8860b", backgroundImage: "url('/lacarta_images/help-videp-banner.png')", backgroundSize: "cover", backgroundPosition: "center" }}
       >
         <div className="absolute inset-0" style={{ backgroundColor: "rgba(210,165,30,0.72)" }} />
-        <div className="relative z-10 px-10 md:px-20 py-12 flex items-start gap-6">
+        <div className="relative z-10 px-4 md:px-20 py-8 md:py-12 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
           {/* Luggage/kit SVG icon */}
-          <svg width="72" height="72" viewBox="0 0 64 64" fill="none" style={{ flexShrink: 0, marginTop: 4 }}>
+          <svg className="w-12 h-12 sm:w-[72px] sm:h-[72px] flex-shrink-0" viewBox="0 0 64 64" fill="none">
             <rect x="14" y="22" width="36" height="30" rx="4" stroke="#000" strokeWidth="2.2" fill="none" />
             <path d="M22 22V17a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v5" stroke="#000" strokeWidth="2.2" strokeLinecap="round" />
             <line x1="32" y1="29" x2="32" y2="45" stroke="#000" strokeWidth="2.2" strokeLinecap="round" />
@@ -78,7 +78,7 @@ export default function HelpVideo() {
       <div className="px-4 md:px-10 py-14 pb-20 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12">
 
         {/* Sidebar */}
-        <aside className="self-start sticky top-8">
+        <aside className="hidden md:block self-start sticky top-8">
           <p className="font-black text-base mb-5 uppercase" style={{ color: "#000" }}>On This Page</p>
           <ul className="space-y-3">
             {sidebarLinks.map((link) => (

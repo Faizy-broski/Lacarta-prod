@@ -14,8 +14,9 @@ export default function HelpMap() {
       <div className="relative w-full" style={{ minHeight: 280, backgroundColor: "#3bbfad", backgroundImage: "url('/lacarta_images/help-banner.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
         {/* overlay */}
         <div className="absolute inset-0" style={{ backgroundColor: "rgba(59,191,173,0.72)" }} />
-        <div className="relative z-10 px-10 md:px-20 py-12 flex items-start gap-6">
-          <Map size={64} strokeWidth={1.5} style={{ color: "#000", flexShrink: 0, marginTop: 4 }} />
+        <div className="relative z-10 px-4 md:px-20 py-8 md:py-12 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+          <Map size={40} strokeWidth={1.5} className="sm:hidden flex-shrink-0" style={{ color: "#000" }} />
+          <Map size={64} strokeWidth={1.5} className="hidden sm:block flex-shrink-0" style={{ color: "#000", marginTop: 4 }} />
           <div>
             <h1
               className="font-antigua font-black uppercase"
@@ -81,7 +82,7 @@ export default function HelpMap() {
       {/* ── Featured location card ── */}
       <div className="px-8 md:px-16 py-8 max-w-5xl mx-auto">
         <div
-          className="flex items-center justify-between gap-6 rounded-2xl p-6"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl p-6"
           style={{ border: "2px solid #f5c542", backgroundColor: "#fffdf0" }}
         >
           <div className="flex-1">
@@ -96,8 +97,8 @@ export default function HelpMap() {
               Save Directions
             </button>
           </div>
-          <div className="flex-shrink-0 rounded overflow-hidden" style={{ width: 180 }}>
-            <img src="/lacarta_images/art-1.jpg" alt="San Felipe Fort" className="w-full h-full object-cover" style={{ height: 120 }} />
+          <div className="w-full sm:w-44 sm:flex-shrink-0 rounded overflow-hidden">
+            <img src="/lacarta_images/art-1.jpg" alt="San Felipe Fort" className="w-full object-cover rounded" style={{ height: 120 }} />
           </div>
         </div>
       </div>

@@ -110,7 +110,7 @@ const tagRoutes = {
   Beaches: "/Beaches",
   Accommodations: "/hotels",
   Boating: "/Boating",
-  "Real Estate": "/realState",
+  "Real Estate": "/real-estate",
   Activities: "/Activities",
   Gastronomy: "/Gastronomy",
 };

@@ -63,9 +63,9 @@ export default function FAQs() {
         }}
       >
         <div className="absolute inset-0" style={{ backgroundColor: "rgba(59,191,173,0.75)" }} />
-        <div className="relative z-10 px-10 md:px-20 py-12 flex items-start gap-6">
+        <div className="relative z-10 px-4 md:px-20 py-8 md:py-12 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
           {/* Magnifying glass SVG */}
-          <svg width="72" height="72" viewBox="0 0 64 64" fill="none" style={{ flexShrink: 0, marginTop: 4 }}>
+          <svg className="w-12 h-12 sm:w-[72px] sm:h-[72px] flex-shrink-0" viewBox="0 0 64 64" fill="none">
             <circle cx="26" cy="26" r="16" stroke="#000" strokeWidth="2.5" fill="none" />
             <line x1="38" y1="38" x2="54" y2="54" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
@@ -88,7 +88,7 @@ export default function FAQs() {
       </div>
 
       {/* 3×3 Landmark image grid */}
-      <div className="px-4 md:px-10 py-12 max-w-[1400px] mx-auto">
+      <div className="px-4 md:px-10 py-8 md:py-12 max-w-[1400px] mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
           {landmarks.map((landmark) => (
             <div key={landmark.name} className="relative rounded-2xl overflow-hidden" style={{ height: 265 }}>
@@ -127,10 +127,10 @@ export default function FAQs() {
       <div style={{ height: 6, backgroundColor: "#f5c542" }} />
 
       {/* 2-col: sidebar + content */}
-      <div className="px-8 md:px-16 py-14 pb-20 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-12">
+      <div className="px-4 md:px-16 py-10 md:py-14 pb-20 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8 md:gap-12">
 
-        {/* Sidebar */}
-        <aside className="self-start sticky top-8">
+        {/* Sidebar — hidden on mobile */}
+        <aside className="hidden md:block self-start sticky top-8">
           <p className="font-black text-base mb-5 uppercase" style={{ color: "#000" }}>
             Cartagena FAQ&apos;S: Our Top 15.
           </p>

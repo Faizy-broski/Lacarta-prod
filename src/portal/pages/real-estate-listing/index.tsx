@@ -220,7 +220,7 @@ export default function RealEstateDetails() {
       <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-3 bg-white">
         <div className="mx-auto max-w-[1100px]">
           <p className="text-[10px] text-gray-400 mb-1.5">
-            <Link href="/realState" className="hover:text-amber-500 transition">Real Estate Listing</Link>
+            <Link href="/real-estate" className="hover:text-amber-500 transition">Real Estate Listing</Link>
             {" "}&rsaquo;{" "}
             <span className="text-gray-600 font-semibold">Market habitats locatifs</span>
           </p>

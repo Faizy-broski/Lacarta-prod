@@ -22,7 +22,6 @@ import Neighborhoods from "../components/real-estate/scroll-Images";
 import WaltSection from "../components/real-estate/Walt-Slider";
 import EstateCard from "@public/components/card/RealEstate-Card";
 import { realEsteteData } from "@public/data/real-estate-page";
-import CartagenaNews from "@public/components/layout/cartagenaNews";
 
 export default function RealestatePage() {
   return (
@@ -41,7 +40,6 @@ export default function RealestatePage() {
           />
         </div>
       </div>
-      <CartagenaNews />
     </>
   );
 }

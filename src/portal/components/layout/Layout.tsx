@@ -26,7 +26,7 @@
 //     { label: "Hotels", path: "/hotels" },
 //     { label: "Beaches", path: "/beaches" },
 //     { label: "Boating", path: "/boating" },
-//     { label: "Real Estate", path: "/realState" },
+//     { label: "Real Estate", path: "/real-estate" },
 //     { label: "Gastronomy", path: "/gastronomy" },
        
 //   ];
@@ -131,7 +131,7 @@
 //               { label: "Hotels", path: "/hotels" },
 //               { label: "Beaches", path: "/beaches" },
 //               { label: "Boating", path: "/boating" },
-//               { label: "Real Estate", path: "/realState" },
+//               { label: "Real Estate", path: "/real-estate" },
 //               { label: "Gastronomy", path: "/gastronomy" },
 //             ].map((item) => (
 //               <Link
@@ -302,7 +302,7 @@
 
 //           <div className="container mx-auto px-4   text-sm text-white">
 //             <div className="flex flex-col border-t-2 pt-8 mt-16 border-white md:flex-row items-center justify-between gap-2">
-//               <span>© LaCarta 2023 – 2025. All rights reserved</span>
+//               <span>© LaCarta 2023 – 2026. All rights reserved</span>
 //               <span>Privacy Policy - Terms & Conditions</span>
 //             </div>
 //           </div>
@@ -346,7 +346,7 @@ const Layout = ({ children }) => {
     { label: "Hotels", path: "/hotels" },
     { label: "Beaches", path: "/beaches" },
     { label: "Boating", path: "/boating" },
-    { label: "Real Estate", path: "/realState" },
+    { label: "Real Estate", path: "/real-estate" },
     { label: "Gastronomy", path: "/gastronomy" },
     { label: "More", path: "/blog" },
   ];
@@ -506,9 +506,9 @@ const Layout = ({ children }) => {
           ></div>
 
           <div className="relative z-10">
-            <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-11 gap-12">
+            <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-11 gap-8 lg:gap-12">
               {/* Left: Logo + Text + Social */}
-              <div className="md:col-span-3">
+              <div className="lg:col-span-3">
                 <Link href="/">
                   <img src={logo} className="w-100 w-md-60 mb-6" alt="LaCarta" />
                 </Link>
@@ -527,8 +527,51 @@ const Layout = ({ children }) => {
                 </Button>
               </div>
 
-              {/* About */}
-              <div className="hidden lg:block md:col-span-2 py-5">
+              {/* Mobile: 3-col link grid */}
+              <div className="grid grid-cols-3 gap-4 lg:hidden py-4 border-t border-white/20">
+                <div>
+                  <h5 className="font-bold mb-3 text-sm">About</h5>
+                  <ul className="space-y-2 text-white text-xs">
+                    {[
+                      { title: "About Us", href: "/about-us" },
+                      { title: "Contact", href: "/contact" },
+                      { title: "Our Culture", href: "/our-culture" },
+                      { title: "Work With Us", href: "/work-with-us" },
+                      { title: "Submit a Story", href: "/submit-a-story" },
+                      { title: "Advertise", href: "/advertise-with-us" },
+                      { title: "Editorial", href: "/editorial-standards" },
+                    ].map((l) => (
+                      <li key={l.title}><Link href={l.href} className="hover:text-gold">{l.title}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h5 className="font-bold mb-3 text-sm">Cartagena</h5>
+                  <ul className="space-y-2 text-white text-xs">
+                    {NAV_LINKS.map(({ label, path }) => (
+                      <li key={label}><Link href={path} className="hover:text-gold">{label}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h5 className="font-bold mb-3 text-sm">Help</h5>
+                  <ul className="space-y-2 text-white text-xs">
+                    {[
+                      { title: "FAQ", href: "/faqs" },
+                      { title: "Travel Guide", href: "/travel-guide" },
+                      { title: "Resources", href: "/resources" },
+                      { title: "Safety Map", href: "/help-map" },
+                      { title: "Staying Safe", href: "#" },
+                      { title: "Tourist Center", href: "/tourist-service-center" },
+                    ].map((l) => (
+                      <li key={l.title}><Link href={l.href} className="hover:text-gold">{l.title}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* About — desktop only */}
+              <div className="hidden lg:block lg:col-span-2 py-5">
                 <h5 className="font-bold mb-6">About</h5>
                 <ul className="space-y-2 text-white">
                   {[
@@ -549,8 +592,8 @@ const Layout = ({ children }) => {
                 </ul>
               </div>
 
-              {/* Cartagena */}
-              <div className="text-center lg:text-start md:col-span-2 py-5">
+              {/* Cartagena — desktop only */}
+              <div className="hidden lg:block text-start lg:col-span-2 py-5">
                 <h5 className="font-bold mb-6">Cartagena</h5>
                 <ul className="space-y-2 text-white">
                   {NAV_LINKS.map(({ label, path }) => (
@@ -563,8 +606,8 @@ const Layout = ({ children }) => {
                 </ul>
               </div>
 
-              {/* Help */}
-              <div className="hidden lg:block text-center lg:text-start md:col-span-2 py-5">
+              {/* Help — desktop only */}
+              <div className="hidden lg:block text-start lg:col-span-2 py-5">
                 <h5 className="font-bold mb-6">Help</h5>
                 <ul className="space-y-2 text-white">
                   {[
@@ -630,7 +673,7 @@ const Layout = ({ children }) => {
 
             <div className="container mx-auto px-4 text-sm text-white">
               <div className="flex flex-col border-t-2 pt-8 mt-16 border-white md:flex-row items-center justify-between gap-2">
-                <span>© LaCarta 2023 – 2025. All rights reserved</span>
+                <span>© LaCarta 2023 – 2026. All rights reserved</span>
                 <span>Privacy Policy - Terms & Conditions</span>
               </div>
             </div>

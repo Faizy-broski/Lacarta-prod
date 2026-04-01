@@ -5,6 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @font-face {
+  font-family: 'Moonscape';
+  src: url('/assets/fonts/Moonscape Demo/Moonscape Demo.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'georgia';
   src: url('/fonts/Georgia/gc-georgia-demo.ttf') format('truetype');
   font-weight: 400;
@@ -29,6 +37,9 @@
 }
 
 @layer utilities {
+  .font-moonscape {
+    font-family: 'Moonscape', sans-serif;
+  }
   .font-antigua {
     font-family: 'antigua', sans-serif;
   }

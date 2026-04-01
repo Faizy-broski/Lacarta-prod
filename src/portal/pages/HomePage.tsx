@@ -57,7 +57,7 @@
 //   Beaches: "/Beaches",
 //   Accommodations: "/hotels",
 //   Boating: "/Boating",
-//   "Real Estate": "/realState",
+//   "Real Estate": "/real-estate",
 //   Activities: "/Activities",
 //   Gastronomy: "/Gastronomy",
 // };
@@ -214,7 +214,7 @@
 //               label: "Tours & Sightseeing",
 //               img: img4,
 //               color: "bg-gradient-to-r from-gold to-gold-light",
-//               href: "/realState",
+//               href: "/real-estate",
 //             },
 //             {
 //               label: "Boat Rentals",
@@ -676,7 +676,7 @@ const tagRoutes: Record<string, string> = {
   Beaches: "/Beaches",
   Accommodations: "/hotels",
   Boating: "/Boating",
-  "Real Estate": "/realState",
+  "Real Estate": "/real-estate",
   Activities: "/Activities",
   Gastronomy: "/Gastronomy",
 };
@@ -745,10 +745,10 @@ const HomePage = () => {
               font-medium
               tracking-[0.08em]
               leading-[0.92]
-              text-[52px]
-              sm:text-[72px]
-              md:text-[96px]
-              lg:text-[100px]
+              text-[68px]
+              sm:text-[96px]
+              md:text-[128px]
+              lg:text-[148px]
               mb-[100px]
               drop-shadow-[0_8px_20px_rgba(0,0,0,0.6)]
           
@@ -833,7 +833,7 @@ const HomePage = () => {
               label: "Tours & Sightseeing",
               img: img4,
               color: "bg-gradient-to-r from-gold to-gold-light",
-              href: "/realState",
+              href: "/real-estate",
             },
             {
               label: "Boat Rentals",
@@ -1107,8 +1107,8 @@ const HomePage = () => {
                 Gringos.
               </p>
 
-              <Button className="px-6 py-3 text-white w-full sm:w-full font-bold rounded bg-gradient-to-r from-green to-green-light hover:brightness-110 transition">
-                <a href="https://lacarta.co/cartagena/resources/">Resources</a>
+              <Button className="px-6 py-3 text-white w-full sm:w-full font-bold rounded bg-gradient-to-r from-green to-green-light hover:brightness-110 transition" asChild>
+                <Link href="/resources">Resources</Link>
               </Button>
             </div>
 

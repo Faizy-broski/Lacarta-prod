@@ -9,11 +9,11 @@ const CircleCard = ({
   className = "",
 }) => (
   <div
-    className={`relative w-full h-1/1 sm:rounded-full mb-5 overflow-hidden  group aspect-square ${className}`}
+    className={`relative w-full rounded-full mb-5 overflow-hidden group aspect-square ${className}`}
   >
     <img
       src={image}
-      className="absolute inset-0 w-full h-full rounded-full object-cover transition-transform duration-500 "
+      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 "
       alt=""
     />
 

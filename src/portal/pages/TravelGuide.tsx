@@ -11,10 +11,11 @@ export default function TravelGuide() {
       </div>
 
       {/* ── Page header ── */}
-      <section className="px-8 md:px-16 pt-10 pb-6 max-w-6xl mx-auto">
-        <div className="flex items-start gap-5">
-          <div className="flex-shrink-0 pt-1">
-            <MapPin size={52} strokeWidth={1.5} style={{ color: "#111" }} />
+      <section className="px-4 md:px-16 pt-8 md:pt-10 pb-6 max-w-6xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+          <div className="flex-shrink-0 sm:pt-1">
+            <MapPin size={40} strokeWidth={1.5} className="sm:hidden" style={{ color: "#111" }} />
+            <MapPin size={52} strokeWidth={1.5} className="hidden sm:block" style={{ color: "#111" }} />
           </div>
           <div>
             <h1
