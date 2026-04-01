@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 import { getCookie } from '@/lib/cookies/cookies'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
