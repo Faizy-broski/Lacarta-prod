@@ -1,0 +1,224 @@
+'use client'
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@public/contexts/AuthContext";
+import { supabase } from "@public/integrations/supabase/client";
+import { useRouter, usePathname } from 'next/navigation';
+import { Button } from "@public/components/ui/button";
+import { Avatar, AvatarFallback } from "@public/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@public/components/ui/dropdown-menu";
+import { Calendar, Search, LogOut, Menu, X } from "lucide-react";
+import Code from "@public/components/codeDialog/codeDialog";
+import { useProfile } from "@public/hooks/useProfile";
+import AppLogo from "@public/components/ui/logo";
+
+const Navigation = () => {
+  const { user, signOut } = useAuth();
+  const { profile } = useProfile();
+  const pathname = usePathname();
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+  };
+
+  const getNavItems = () => {
+    const baseItems = [
+      { icon: Calendar, label: "Reservering", path: "/" },
+      { icon: Search, label: "Mijn boekingen", path: "/my-bookings" },
+    ];
+    return baseItems;
+  };
+
+  useEffect(() => {
+    fetchTodayBookings();
+  }, [profile]);
+
+  const fetchTodayBookings = async () => {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    const weekdayNames = [
+      "Zondag",
+      "Maandag",
+      "Dinsdag",
+      "Woensdag",
+      "Donderdag",
+      "Vrijdag",
+      "Zaterdag",
+    ];
+    const weekday = weekdayNames[new Date().getDay()]; // e.g. "friday"
+
+    try {
+      const { data: bookings, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("user_id", profile.id)
+        .or(
+          `and(is_recurring.eq.false,date.eq.${today}),and(is_recurring.eq.true,start_date.lte.${today},end_date.gte.${today},weekdays.cs.{"${weekday}"})`
+        );
+
+      if (error) throw error;
+
+      console.log("booooking fetched", bookings);
+
+      if (bookings.length > 0) {
+        setBooking(true);
+      }
+    } catch (error) {
+      console.error("error fetching bookings for today.", error);
+    }
+  };
+
+  const showAuthFun = () => {
+    router.push("/auth");
+  };
+
+  const navItems = getNavItems();
+
+  return (
+    <nav className="border-b border-border">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16 items-center">
+          {/* Logo */}
+          <div
+            onClick={() => router.push("/")}
+            className="cursor-pointer flex items-center space-x-1 shrink-0"
+          >
+            <AppLogo />
+          </div>
+          {!user ? (
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={() => showAuthFun()}
+                variant="outline"
+                className="text-primary"
+              >
+                Aanmelden
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Menu */}
+              <div className="hidden md:flex items-center space-x-6">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.path;
+                  return (
+                    <Button
+                      key={item.path}
+                      variant="outline"
+                      className={`flex border bg-background border-none items-center space-x-1 ${
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-secondary"
+                      }`}
+                      onClick={() => router.push(item.path)}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {/* Right Side */}
+              <div className="flex items-center space-x-4">
+                {booking && (
+                  <Button
+                    className="border border-primary bg-primary text-secondary hover:bg-secondary hover:text-primary"
+                    onClick={() => setShowCode(true)}
+                  >
+                    Code
+                  </Button>
+                )}
+                {/* <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="relative h-8 w-8 border border-primary rounded-full"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-secondary text-primary">
+                          {profile?.full_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="flex items-center justify-center w-max hover:bg-primary hover:text-secondary bg-secondary text-primary border border-primary cursor-pointer"
+                    align="end"
+                    forceMount
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuContent>
+                </DropdownMenu> */}
+                <Button
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="border bg-secondary border-primary hover:bg-primary text-primary hover:text-secondary"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+
+                {/* Hamburger Icon */}
+                <div className="md:hidden">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsOpen(!isOpen)}
+                  >
+                    {isOpen ? (
+                      <X className="h-6 w-6" />
+                    ) : (
+                      <Menu className="h-6 w-6" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Mobile Menu */}
+        {isOpen && (
+          <div className="md:hidden mt-2 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.path;
+
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => {
+                    router.push(item.path);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center px-4 py-2 text-left ${
+                    isActive
+                      ? "bg-peach-gold/10 text-peach-gold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="mr-2 h-5 w-5" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <Code open={showCode} onOpenChange={setShowCode} />
+    </nav>
+  );
+};
+
+export default Navigation;
