@@ -9,11 +9,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // DEV bypass — mirrors the AuthGuard DEV bypass in the old app
-  if (process.env.NODE_ENV === 'development') {
-    return NextResponse.next()
-  }
-
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -46,13 +41,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl)
   }
 
+  // Subscribers have no dashboard — redirect them to the public profile page
+  const role = user.user_metadata?.role as string | undefined
+  if (role === 'subscriber') {
+    return NextResponse.redirect(new URL('/profile', request.url))
+  }
+
   return response
 }
 
 export const config = {
-  matcher: [
-    // Match all dashboard routes; skip Next.js internals and static files
-    '/dashboard/:path*',
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/dashboard/:path*'],
 }
