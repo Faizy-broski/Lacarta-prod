@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,7 +33,6 @@ const formSchema = z
   .object({
     firstName: z.string().min(1, 'First Name is required.'),
     lastName: z.string().min(1, 'Last Name is required.'),
-    username: z.string().min(1, 'Username is required.'),
     phoneNumber: z.string().min(1, 'Phone number is required.'),
     email: z.email({
       error: (iss) => (iss.input === '' ? 'Email is required.' : undefined),
@@ -46,91 +47,117 @@ const formSchema = z
       if (data.isEdit && !data.password) return true
       return data.password.length > 0
     },
-    {
-      message: 'Password is required.',
-      path: ['password'],
-    }
+    { message: 'Password is required.', path: ['password'] }
   )
   .refine(
     ({ isEdit, password }) => {
       if (isEdit && !password) return true
       return password.length >= 8
     },
-    {
-      message: 'Password must be at least 8 characters long.',
-      path: ['password'],
-    }
+    { message: 'Password must be at least 8 characters long.', path: ['password'] }
   )
   .refine(
     ({ isEdit, password }) => {
       if (isEdit && !password) return true
       return /[a-z]/.test(password)
     },
-    {
-      message: 'Password must contain at least one lowercase letter.',
-      path: ['password'],
-    }
+    { message: 'Password must contain at least one lowercase letter.', path: ['password'] }
   )
   .refine(
     ({ isEdit, password }) => {
       if (isEdit && !password) return true
       return /\d/.test(password)
     },
-    {
-      message: 'Password must contain at least one number.',
-      path: ['password'],
-    }
+    { message: 'Password must contain at least one number.', path: ['password'] }
   )
   .refine(
     ({ isEdit, password, confirmPassword }) => {
       if (isEdit && !password) return true
       return password === confirmPassword
     },
-    {
-      message: "Passwords don't match.",
-      path: ['confirmPassword'],
-    }
+    { message: "Passwords don't match.", path: ['confirmPassword'] }
   )
+
 type UserForm = z.infer<typeof formSchema>
 
 type UserActionDialogProps = {
   currentRow?: User
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
 export function UsersActionDialog({
   currentRow,
   open,
   onOpenChange,
+  onSuccess,
 }: UserActionDialogProps) {
   const isEdit = !!currentRow
+  const [saving, setSaving] = useState(false)
+
+  const nameParts = currentRow?.full_name?.split(' ') ?? []
   const form = useForm<UserForm>({
     resolver: zodResolver(formSchema),
     defaultValues: isEdit
       ? {
-          ...currentRow,
+          firstName: nameParts[0] ?? '',
+          lastName: nameParts.slice(1).join(' ') ?? '',
+          email: currentRow?.email ?? '',
+          phoneNumber: (currentRow as any)?.phone ?? '',
+          role: currentRow?.role ?? '',
           password: '',
           confirmPassword: '',
-          isEdit,
+          isEdit: true,
         }
       : {
           firstName: '',
           lastName: '',
-          username: '',
           email: '',
           role: '',
           phoneNumber: '',
           password: '',
           confirmPassword: '',
-          isEdit,
+          isEdit: false,
         },
   })
 
-  const onSubmit = (values: UserForm) => {
-    form.reset()
-    showSubmittedData(values)
-    onOpenChange(false)
+  const onSubmit = async (values: UserForm) => {
+    setSaving(true)
+    const full_name = `${values.firstName} ${values.lastName}`.trim()
+
+    if (isEdit) {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: currentRow!.id, full_name, role: values.role, phone: values.phoneNumber }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Failed to update user.')
+      } else {
+        toast.success('User updated.')
+        form.reset()
+        onOpenChange(false)
+        onSuccess?.()
+      }
+    } else {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: values.email, password: values.password, full_name, role: values.role, phone: values.phoneNumber }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Failed to create user.')
+      } else {
+        toast.success('User created successfully.')
+        form.reset()
+        onOpenChange(false)
+        onSuccess?.()
+      }
+    }
+    setSaving(false)
   }
 
   const isPasswordTouched = !!form.formState.dirtyFields.password
@@ -163,16 +190,9 @@ export function UsersActionDialog({
                 name='firstName'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>
-                      First Name
-                    </FormLabel>
+                    <FormLabel className='col-span-2 text-end'>First Name</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder='John'
-                        className='col-span-4'
-                        autoComplete='off'
-                        {...field}
-                      />
+                      <Input placeholder='John' className='col-span-4' autoComplete='off' {...field} />
                     </FormControl>
                     <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
@@ -183,35 +203,9 @@ export function UsersActionDialog({
                 name='lastName'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>
-                      Last Name
-                    </FormLabel>
+                    <FormLabel className='col-span-2 text-end'>Last Name</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder='Doe'
-                        className='col-span-4'
-                        autoComplete='off'
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className='col-span-4 col-start-3' />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='username'
-                render={({ field }) => (
-                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>
-                      Username
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder='john_doe'
-                        className='col-span-4'
-                        {...field}
-                      />
+                      <Input placeholder='Doe' className='col-span-4' autoComplete='off' {...field} />
                     </FormControl>
                     <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
@@ -227,6 +221,7 @@ export function UsersActionDialog({
                       <Input
                         placeholder='john.doe@gmail.com'
                         className='col-span-4'
+                        disabled={isEdit}
                         {...field}
                       />
                     </FormControl>
@@ -239,15 +234,9 @@ export function UsersActionDialog({
                 name='phoneNumber'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>
-                      Phone Number
-                    </FormLabel>
+                    <FormLabel className='col-span-2 text-end'>Phone Number</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder='+123456789'
-                        className='col-span-4'
-                        {...field}
-                      />
+                      <Input placeholder='+123456789' className='col-span-4' {...field} />
                     </FormControl>
                     <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
@@ -264,10 +253,7 @@ export function UsersActionDialog({
                       onValueChange={field.onChange}
                       placeholder='Select a role'
                       className='col-span-4'
-                      items={roles.map(({ label, value }) => ({
-                        label,
-                        value,
-                      }))}
+                      items={roles.map(({ label, value }) => ({ label, value }))}
                     />
                     <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
@@ -278,9 +264,7 @@ export function UsersActionDialog({
                 name='password'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>
-                      Password
-                    </FormLabel>
+                    <FormLabel className='col-span-2 text-end'>Password</FormLabel>
                     <FormControl>
                       <PasswordInput
                         placeholder='e.g., S3cur3P@ssw0rd'
@@ -297,9 +281,7 @@ export function UsersActionDialog({
                 name='confirmPassword'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>
-                      Confirm Password
-                    </FormLabel>
+                    <FormLabel className='col-span-2 text-end'>Confirm Password</FormLabel>
                     <FormControl>
                       <PasswordInput
                         disabled={!isPasswordTouched}
@@ -316,7 +298,8 @@ export function UsersActionDialog({
           </Form>
         </div>
         <DialogFooter>
-          <Button type='submit' form='user-form'>
+          <Button type='submit' form='user-form' disabled={saving}>
+            {saving && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
             Save changes
           </Button>
         </DialogFooter>

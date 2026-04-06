@@ -22,11 +22,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const formSchema = z.object({
   email: z
     .string()
     .min(1, 'Please enter your email')
-    .email('Invalid email address'),
+    .refine((v) => emailRegex.test(v.trim()), 'Invalid email address'),
   password: z
     .string()
     .min(1, 'Please enter your password')
@@ -57,9 +59,17 @@ export function UserAuthForm({
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    const redirect = await signIn(data.email, data.password)
+    try {
+      const redirect = await signIn(data.email.trim(), data.password)
 
-    router.push(redirect)
+      if (redirect) {
+        router.push(redirect)
+      } else {
+        setIsLoading(false)
+      }
+    } catch {
+      setIsLoading(false)
+    }
 
     // const { data: signInData, error: signInError } =
     //   await supabase.auth.signInWithPassword({
@@ -127,7 +137,7 @@ export function UserAuthForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-3', className)}
+        className={cn('grid gap-4', className)}
         {...props}
       >
         <FormField
@@ -135,9 +145,15 @@ export function UserAuthForm({
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Email
+              </FormLabel>
               <FormControl>
-                <Input placeholder='name@example.com' {...field} />
+                <Input
+                  placeholder='name@example.com'
+                  className='h-11 rounded-lg border-border/50 bg-muted/30 transition-colors focus-within:bg-background'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -148,25 +164,25 @@ export function UserAuthForm({
           name='password'
           render={({ field }) => (
             <FormItem className='relative'>
-              <FormLabel>Password</FormLabel>
+              <FormLabel className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Password
+              </FormLabel>
               <FormControl>
-                <PasswordInput placeholder='********' {...field} />
+                <PasswordInput
+                  placeholder='••••••••'
+                  className='h-11 rounded-lg border-border/50 bg-muted/30 transition-colors focus-within:bg-background'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
-              {/* <Link
-                to='/forgot-password'
-                className='absolute end-0 -top-0.5 text-sm font-medium text-muted-foreground hover:opacity-75'
-              >
-                Forgot password?
-              </Link> */}
             </FormItem>
           )}
         />
         <Button
-          className='mt-2 bg-linear-to-b from-gold to-gold-light'
+          className='mt-3 h-11 rounded-lg bg-gradient-to-r from-gold to-gold-light font-semibold text-black shadow-md transition-all hover:shadow-lg hover:brightness-110'
           disabled={isLoading}
         >
-          {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
+          {isLoading ? <Loader2 className='animate-spin' /> : <LogIn className='mr-1 h-4 w-4' />}
           Sign in
         </Button>
       </form>

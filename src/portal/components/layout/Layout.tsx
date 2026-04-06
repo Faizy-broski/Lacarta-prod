@@ -537,6 +537,7 @@ const Layout = ({ children }) => {
                       { title: "Contact", href: "/contact" },
                       { title: "Our Culture", href: "/our-culture" },
                       { title: "Work With Us", href: "/work-with-us" },
+                      { title: "List Your Business", href: "/apply" },
                       { title: "Submit a Story", href: "/submit-a-story" },
                       { title: "Advertise", href: "/advertise-with-us" },
                       { title: "Editorial", href: "/editorial-standards" },

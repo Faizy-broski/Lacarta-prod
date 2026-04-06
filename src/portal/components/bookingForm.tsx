@@ -1,180 +1,200 @@
+'use client'
+
+import { useRef, useState } from 'react'
+import { Loader2, ChevronDown } from 'lucide-react'
+import { toast } from 'sonner'
+import { createClient } from '@supabase/supabase-js'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
-} from "@public/components/ui/dialog";
-import { Input } from "@public/components/ui/input";
-import { Textarea } from "@public/components/ui/textarea";
-import { Button } from "@public/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@public/components/ui/select";
-import { X } from "lucide-react";
-import { useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+} from '@public/components/ui/dialog'
+import { Input } from '@public/components/ui/input'
+import { Textarea } from '@public/components/ui/textarea'
+import { Button } from '@public/components/ui/button'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface BookingDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  listingId?: string
 }
 
-export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
-  const inputStartRef = useRef<HTMLInputElement>(null);
-  const inputEndRef = useRef<HTMLInputElement>(null);
-  const [startvalue, setStartValue] = useState("");
-  const [endvalue, setEndValue] = useState("");
+export function BookingDialog({ open, onOpenChange, listingId }: BookingDialogProps) {
+  const inputStartRef = useRef<HTMLInputElement>(null)
+  const inputEndRef = useRef<HTMLInputElement>(null)
+
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [groupSize, setGroupSize] = useState('')
+  const [comment, setComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const openPicker = (ref: React.RefObject<HTMLInputElement>) => {
-  if (ref.current?.showPicker) {
-    ref.current.showPicker()
-  } else {
-    ref.current?.focus()
+    if (ref.current?.showPicker) {
+      ref.current.showPicker()
+    } else {
+      ref.current?.focus()
+    }
   }
-}
+
+  const resetForm = () => {
+    setName('')
+    setPhone('')
+    setEmail('')
+    setStartDate('')
+    setEndDate('')
+    setGroupSize('')
+    setComment('')
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim() || !email.trim()) {
+      toast.error('Name and email are required.')
+      return
+    }
+    setSubmitting(true)
+
+    const { error } = await supabase.from('inquiries').insert({
+      listing_id: listingId ?? null,
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim() || null,
+      message: comment.trim() || null,
+      start_date: startDate || null,
+      end_date: endDate || null,
+      group_size: groupSize ? parseInt(groupSize, 10) : null,
+      inquiry_type: 'booking',
+      status: 'new',
+    })
+
+    setSubmitting(false)
+    if (error) {
+      toast.error('Failed to submit booking. Please try again.')
+    } else {
+      toast.success('Booking submitted! We will get back to you soon.')
+      resetForm()
+      onOpenChange(false)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(s) => { if (!submitting) { resetForm(); onOpenChange(s) } }}>
       <DialogContent
-        className="
-          w-[95%] 
-          max-w-3xl 
-          max-h-[80vh]
-          overflow-auto
-          rounded-2xl 
-          bg-[#f4f4f4] 
-          p-6 sm:p-10 
-          shadow-2xl
-        "
+        className='w-[95%] max-w-3xl max-h-[80vh] overflow-auto rounded-2xl bg-[#f4f4f4] p-6 sm:p-10 shadow-2xl'
       >
-        {/* Header */}
-        <DialogHeader className="relative">
-          <DialogTitle className="font-antigua text-2xl text-black sm:text-3xl tracking-wide">
+        <DialogHeader className='relative'>
+          <DialogTitle className='font-antigua text-2xl text-black sm:text-3xl tracking-wide'>
             Book With La Carta
           </DialogTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            Fill the details for booking.
-          </p>
-
-          {/* <DialogClose className="absolute right-0 top-0 opacity-70 hover:opacity-100">
-            <X className="w-5 h-5" />
-          </DialogClose> */}
+          <p className='text-sm text-muted-foreground mt-1'>Fill the details for booking.</p>
         </DialogHeader>
 
-        {/* Form */}
-        <div className="mt-6 space-y-6">
+        <form onSubmit={handleSubmit} className='mt-6 space-y-6'>
           <Input
-            placeholder="Name"
-            className="bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0 text-black"
+            placeholder='Name *'
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className='bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0 text-black'
           />
 
           <Input
-            placeholder="Number"
-            className="bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0 text-black"
+            placeholder='Phone Number'
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className='bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0 text-black'
           />
 
           <Input
-            type="email"
-            placeholder="Email"
-            className="bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0 text-black"
+            type='email'
+            placeholder='Email *'
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className='bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0 text-black'
           />
 
           {/* Dates Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
             {/* Start Date */}
-            <div className="relative w-full">
-              {/* Hidden Native Input */}
+            <div className='relative w-full'>
               <input
                 ref={inputStartRef}
-                type="date"
-                value={startvalue}
-                onChange={(e) => setStartValue(e.target.value)}
-                className="absolute inset-0 opacity-0 pointer-events-none  w-full flex items-center justify-between border-0 border-b border-gray-300 pb-2 text-left bg-transparent rounded-none shadow-none focus:outline-none  h-10  border-input  px-3 py-2 text-muted-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-muted-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                type='date'
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className='absolute inset-0 opacity-0 pointer-events-none w-full h-10'
               />
-
-              {/* Visible Styled Trigger */}
               <button
-                type="button"
+                type='button'
                 onClick={() => openPicker(inputStartRef)}
-                className="w-full flex items-center justify-between border-0 border-b border-gray-300 pb-2 text-left bg-transparent rounded-none shadow-none focus:outline-none  h-10  border-input  px-3 py-2 text-muted-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-muted-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                className='w-full flex items-center justify-between border-0 border-b border-gray-300 pb-2 text-left bg-transparent rounded-none shadow-none focus:outline-none h-10 px-3 py-2 text-muted-foreground md:text-sm'
               >
-                <span className={startvalue ? "text-black" : "text-gray-500"}>
-                  {startvalue || "Start Date"}
+                <span className={startDate ? 'text-black' : 'text-gray-500'}>
+                  {startDate || 'Start Date'}
                 </span>
-
-                <ChevronDown className="h-4 w-4 text-gray-500" />
+                <ChevronDown className='h-4 w-4 text-gray-500' />
               </button>
             </div>
 
             {/* End Date */}
-            <div className="relative w-full">
-              {/* Hidden Native Input */}
+            <div className='relative w-full'>
               <input
                 ref={inputEndRef}
-                type="date"
-                value={endvalue}
-                onChange={(e) => setEndValue(e.target.value)}
-                className="absolute inset-0 opacity-0 pointer-events-none  w-full flex items-center justify-between border-0 border-b border-gray-300 pb-2 text-left bg-transparent rounded-none shadow-none focus:outline-none  h-10  border-input  px-3 py-2 text-muted-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-muted-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                type='date'
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className='absolute inset-0 opacity-0 pointer-events-none w-full h-10'
               />
-
-              {/* Visible Styled Trigger */}
               <button
-                type="button"
+                type='button'
                 onClick={() => openPicker(inputEndRef)}
-                className="w-full flex items-center justify-between border-0 border-b border-gray-300 pb-2 text-left bg-transparent rounded-none shadow-none focus:outline-none  h-10  border-input  px-3 py-2 text-muted-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-muted-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                className='w-full flex items-center justify-between border-0 border-b border-gray-300 pb-2 text-left bg-transparent rounded-none shadow-none focus:outline-none h-10 px-3 py-2 text-muted-foreground md:text-sm'
               >
-                <span className={endvalue ? "text-black" : "text-gray-500"}>
-                  {endvalue || "End Date"}
+                <span className={endDate ? 'text-black' : 'text-gray-500'}>
+                  {endDate || 'End Date'}
                 </span>
-
-                <ChevronDown className="h-4 w-4 text-gray-500" />
+                <ChevronDown className='h-4 w-4 text-gray-500' />
               </button>
             </div>
           </div>
 
           <Input
-            placeholder="Group Size"
-            className="bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0 text-black"
+            placeholder='Group Size'
+            type='number'
+            min='1'
+            value={groupSize}
+            onChange={(e) => setGroupSize(e.target.value)}
+            className='bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0 text-black'
           />
 
           <Textarea
-            placeholder="Comment"
-            className="
-              min-h-[150px] 
-              resize-none 
-              bg-transparent 
-              border 
-              rounded-xl 
-              focus-visible:ring-0 text-black
-            "
+            placeholder='Comment'
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className='min-h-[150px] resize-none bg-transparent border rounded-xl focus-visible:ring-0 text-black'
           />
-        </div>
 
-        {/* Button */}
-        <div className="mt-8">
           <Button
-            className="
-              w-full 
-              h-14 
-              rounded-full 
-              text-base 
-              font-medium
-              font-antigua
-              bg-gradient-to-b
-              from-gold
-              to-gold-light
-              text-white 
-              hover:opacity-90
-            "
+            type='submit'
+            disabled={submitting}
+            className='w-full h-14 rounded-full text-base font-medium font-antigua bg-gradient-to-b from-gold to-gold-light text-white hover:opacity-90'
           >
+            {submitting ? <Loader2 className='mr-2 h-5 w-5 animate-spin' /> : null}
             Book with La Carta
           </Button>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

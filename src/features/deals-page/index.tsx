@@ -1,27 +1,28 @@
-import { ReceiptText, 
-  // Plus 
-} from 'lucide-react'
+'use client'
+
+import { ReceiptText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Tabs,
   TabsContent,
-  // TabsList, TabsTrigger
 } from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-// import { ProfileDropdown } from '@/components/profile-dropdown'
-// import { Search } from '@/components/search'
-// import { ThemeSwitch } from '@/components/theme-switch'
+import { useAuthStore } from '@/lib/auth/auth.store'
 import ActiveDeals from './components/ActiveDeals'
 import ExpiredDeals from './components/ExpiredDeals'
 import FeaturedDeals from './components/FeaturedDeals'
 import ScheduledDeals from './components/ScheduledDeals'
+import PendingDeals from './components/PendingDeals'
 import CreateDealModal from './components/createDealPage'
 import DealsOverview from './components/filterDeals'
 import PartnerSnapshot from './components/partnerSnapShot'
 import TabsPage from './components/tabs.tsx'
 
 export function DealsPage() {
+  const user = useAuthStore((s) => s.user)
+  const canApprove = ['owner', 'admin', 'assistant'].includes(user?.role?.[0] ?? '')
+
   return (
     <>
       {/* ===== Top Heading ===== */}
@@ -53,6 +54,12 @@ export function DealsPage() {
         </Tabs>
 
         <DealsOverview />
+        {canApprove && (
+          <div className='mb-6'>
+            <h2 className='mb-3 font-semibold text-base'>Pending Approval</h2>
+            <PendingDeals />
+          </div>
+        )}
         <ActiveDeals />
         <ScheduledDeals />
         <ExpiredDeals />

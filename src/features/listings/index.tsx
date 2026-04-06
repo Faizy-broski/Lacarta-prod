@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
+import { useSearchParams } from 'next/navigation'
 
 type ListingStatus = 'active' | 'inactive' | 'pending' | 'featured'
 
@@ -107,6 +108,7 @@ function StarRating({ rating }: { rating?: number }) {
 
 export function ListingsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [listings, setListings] = useState<Listing[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,6 +117,7 @@ export function ListingsPage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [showAddMenu, setShowAddMenu] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -132,6 +135,12 @@ export function ListingsPage() {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // Sync filterCategory with URL query param on mount
+  useEffect(() => {
+    const urlCategory = searchParams.get('category')
+    if (urlCategory) setFilterCategory(urlCategory)
+  }, [searchParams])
 
   const filtered = listings.filter((l) => {
     const q = search.toLowerCase()
@@ -178,10 +187,54 @@ export function ListingsPage() {
               >
                 <RefreshCw className='h-4 w-4' />
               </button>
-              <Button onClick={() => router.push('/listings/create')}>
-                <Plus className='h-4 w-4' />
-                Add Listing
-              </Button>
+              {/* Optimized Add Listing button logic */}
+              {filterCategory !== 'all' ? (
+                <Button
+                  onClick={() => {
+                    let cat = categories.find((c) => c.id === filterCategory)
+                    if (!cat) {
+                      // Try to match by slug if not found by id
+                      cat = categories.find((c) => c.name.toLowerCase().replace(/\s+/g, '_') === filterCategory)
+                    }
+                    if (!cat) return
+                    const slug = cat.name.toLowerCase().replace(/\s+/g, '_')
+                    router.push(`/dashboard/listings/${slug}/create`)
+                  }}
+                >
+                  <Plus className='h-4 w-4' />
+                  Add Listing
+                </Button>
+              ) : (
+                <div className='relative'>
+                  <Button
+                    onClick={() => setShowAddMenu((v) => !v)}
+                    aria-haspopup='true'
+                    aria-expanded={showAddMenu ? 'true' : 'false'}
+                  >
+                    <Plus className='h-4 w-4' />
+                    Add Listing
+                  </Button>
+                  {showAddMenu && (
+                    <div className='absolute right-0 z-10 mt-2 w-48 rounded-md border bg-white shadow-lg'>
+                      {categories.map((cat) => {
+                        const slug = cat.name.toLowerCase().replace(/\s+/g, '_')
+                        return (
+                          <button
+                            key={cat.id}
+                            className='block w-full px-4 py-2 text-left text-sm hover:bg-gray-100'
+                            onClick={() => {
+                              setShowAddMenu(false)
+                              router.push(`/dashboard/listings/${slug}/create`)
+                            }}
+                          >
+                            Add {cat.name} Listing
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

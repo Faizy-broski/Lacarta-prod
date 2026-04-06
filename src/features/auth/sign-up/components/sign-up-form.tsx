@@ -21,14 +21,16 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const formSchema = z
   .object({
     full_name: z.string().min(2, 'Please enter your name'),
 
-    email: z.email({
-      error: (iss) =>
-        iss.input === '' ? 'Please enter your email' : undefined,
-    }),
+    email: z
+      .string()
+      .min(1, 'Please enter your email')
+      .refine((v) => emailRegex.test(v.trim()), 'Invalid email address'),
     password: z
       .string()
       .min(1, 'Please enter your password')
@@ -61,11 +63,19 @@ export function SignUpForm({
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    const user_role = 'client'
+    const user_role = 'subscriber'
 
-    const redirect = await signUp(data.email, data.password, data.full_name, user_role)
+    try {
+      const redirect = await signUp(data.email.trim(), data.password, data.full_name, user_role)
 
-    router.push(redirect)
+      if (redirect) {
+        router.push(redirect)
+      } else {
+        setIsLoading(false)
+      }
+    } catch {
+      setIsLoading(false)
+    }
 
     // toast.promise(sleep(2000), {
     //   loading: 'Signing in...',
@@ -98,17 +108,23 @@ export function SignUpForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-3', className)}
+        className={cn('grid gap-4', className)}
         {...props}
       >
-      <FormField
+        <FormField
           control={form.control}
           name='full_name'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full Name</FormLabel>
+              <FormLabel className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Full Name
+              </FormLabel>
               <FormControl>
-                <Input placeholder='John Doe' {...field} />
+                <Input
+                  placeholder='John Doe'
+                  className='h-11 rounded-lg border-border/50 bg-muted/30 transition-colors focus-within:bg-background'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -119,76 +135,73 @@ export function SignUpForm({
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Email
+              </FormLabel>
               <FormControl>
-                <Input placeholder='name@example.com' {...field} />
+                <Input
+                  placeholder='name@example.com'
+                  className='h-11 rounded-lg border-border/50 bg-muted/30 transition-colors focus-within:bg-background'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name='password'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <PasswordInput placeholder='********' {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='confirmPassword'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
-              <FormControl>
-                <PasswordInput placeholder='********' {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <FormField
+            control={form.control}
+            name='password'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                  Password
+                </FormLabel>
+                <FormControl>
+                  <PasswordInput
+                    placeholder='••••••••'
+                    className='h-11 rounded-lg border-border/50 bg-muted/30 transition-colors focus-within:bg-background'
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name='confirmPassword'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                  Confirm Password
+                </FormLabel>
+                <FormControl>
+                  <PasswordInput
+                    placeholder='••••••••'
+                    className='h-11 rounded-lg border-border/50 bg-muted/30 transition-colors focus-within:bg-background'
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <Button
-          className='mt-2 bg-gradient-to-b from-gold to-gold-light'
+          className='mt-3 h-11 rounded-lg bg-gradient-to-r from-gold to-gold-light font-semibold text-black shadow-md transition-all hover:shadow-lg hover:brightness-110'
           disabled={isLoading}
         >
-          Sign up
-        </Button>
-
-        {/* <div className='relative my-2'>
-          <div className='absolute inset-0 flex items-center'>
-            <span className='w-full border-t' />
-          </div>
-          <div className='relative flex justify-center text-xs uppercase'>
-            <span className='bg-background px-2 text-muted-foreground'>
-              Or continue with
+          {isLoading ? (
+            <span className='flex items-center gap-2'>
+              <span className='h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black' />
+              Creating account...
             </span>
-          </div>
-        </div>
-
-        <div className='grid grid-cols-2 gap-2'>
-          <Button
-            variant='outline'
-            className='w-full'
-            type='button'
-            disabled={isLoading}
-          >
-            <IconGithub className='h-4 w-4' /> GitHub
-          </Button>
-          <Button
-            variant='outline'
-            className='w-full'
-            type='button'
-            disabled={isLoading}
-          >
-            <IconFacebook className='h-4 w-4' /> Facebook
-          </Button>
-        </div> */}
+          ) : (
+            'Create account'
+          )}
+        </Button>
       </form>
     </Form>
   )

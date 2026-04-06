@@ -123,7 +123,7 @@ export const Auth = () => {
 
         const { error } = await signUp(email, password, {
           full_name: fullName.trim(),
-          role: "user",
+          role: "subscriber",
         });
         if (!error) {
           toast({

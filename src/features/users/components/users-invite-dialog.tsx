@@ -1,8 +1,11 @@
+'use client'
+
+import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { MailPlus, Send } from 'lucide-react'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { Loader2, MailPlus, Send } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -40,21 +43,33 @@ type UserInviteForm = z.infer<typeof formSchema>
 type UserInviteDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-export function UsersInviteDialog({
-  open,
-  onOpenChange,
-}: UserInviteDialogProps) {
+export function UsersInviteDialog({ open, onOpenChange, onSuccess }: UserInviteDialogProps) {
+  const [sending, setSending] = useState(false)
   const form = useForm<UserInviteForm>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '', role: '', desc: '' },
   })
 
-  const onSubmit = (values: UserInviteForm) => {
-    form.reset()
-    showSubmittedData(values)
-    onOpenChange(false)
+  const onSubmit = async (values: UserInviteForm) => {
+    setSending(true)
+    const res = await fetch('/api/admin/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+    const json = await res.json()
+    setSending(false)
+    if (!res.ok) {
+      toast.error(json.error ?? 'Failed to send invitation.')
+    } else {
+      toast.success(`Invitation sent to ${values.email}.`)
+      form.reset()
+      onOpenChange(false)
+      onSuccess?.()
+    }
   }
 
   return (
@@ -71,8 +86,8 @@ export function UsersInviteDialog({
             <MailPlus /> Invite User
           </DialogTitle>
           <DialogDescription>
-            Invite new user to join your team by sending them an email
-            invitation. Assign a role to define their access level.
+            Invite new user to join your team by sending them an email invitation. Assign a role to
+            define their access level.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -88,11 +103,7 @@ export function UsersInviteDialog({
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input
-                      type='email'
-                      placeholder='eg: john.doe@gmail.com'
-                      {...field}
-                    />
+                    <Input type='email' placeholder='eg: john.doe@gmail.com' {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -108,10 +119,7 @@ export function UsersInviteDialog({
                     defaultValue={field.value}
                     onValueChange={field.onChange}
                     placeholder='Select a role'
-                    items={roles.map(({ label, value }) => ({
-                      label,
-                      value,
-                    }))}
+                    items={roles.map(({ label, value }) => ({ label, value }))}
                   />
                   <FormMessage />
                 </FormItem>
@@ -121,7 +129,7 @@ export function UsersInviteDialog({
               control={form.control}
               name='desc'
               render={({ field }) => (
-                <FormItem className=''>
+                <FormItem>
                   <FormLabel>Description (optional)</FormLabel>
                   <FormControl>
                     <Textarea
@@ -140,8 +148,9 @@ export function UsersInviteDialog({
           <DialogClose asChild>
             <Button variant='outline'>Cancel</Button>
           </DialogClose>
-          <Button type='submit' form='user-invite-form'>
-            Invite <Send />
+          <Button type='submit' form='user-invite-form' disabled={sending}>
+            {sending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Send className='mr-2 h-4 w-4' />}
+            Invite
           </Button>
         </DialogFooter>
       </DialogContent>

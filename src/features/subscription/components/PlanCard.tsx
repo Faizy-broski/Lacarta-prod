@@ -1,13 +1,10 @@
 import {
   Check,
   Crown,
-  Eye,
   EllipsisVertical,
+  Loader2,
   Sparkles,
   Star,
-  CircleDollarSign,
-  Banknote,
-  Coins,
   User,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -46,9 +43,12 @@ interface PlanCardProps {
   monthlyPrice: number
   yearlyPrice: number
   yearlyDiscount: number
+  billingPeriod: 'monthly' | 'yearly'
   status: 'active' | 'inactive'
   features: string[]
   isAdminFree: boolean
+  isCheckingOut?: boolean
+  onUpgrade?: () => void
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -59,15 +59,21 @@ export default function PlanCard({
   monthlyPrice,
   yearlyPrice,
   yearlyDiscount,
+  billingPeriod,
   status,
   features,
-  isAdminFree,
+  isAdminFree: _isAdminFree,
+  isCheckingOut,
+  onUpgrade,
 }: PlanCardProps) {
   const bg =
     TIER_BG[tierOrder] ?? 'bg-gradient-to-r from-slate-400 to-slate-500'
   const icon = TIER_ICONS[tierOrder] ?? <User className='h-5 w-5' />
   const priceColor = TIER_PRICE_COLOR[tierOrder] ?? 'text-slate-900'
   const isActive = status === 'active'
+  const isFree = tierOrder === 0
+  const displayPrice = billingPeriod === 'yearly' ? yearlyPrice : monthlyPrice
+  const periodLabel = billingPeriod === 'yearly' ? '/year' : '/month'
 
   return (
     <Card className='flex h-full flex-col overflow-hidden rounded-sm border p-0'>
@@ -111,24 +117,27 @@ export default function PlanCard({
         {/* PRICE */}
         <div>
           <div className='flex items-end'>
-            <span>
-              <span className='text-xs text-slate-500 sm:text-sm'>COP </span>
-              <span className={`text-3xl font-bold`}>
-                {Number(monthlyPrice).toFixed(0)}
-              </span>
-            </span>
-            <span className='text-xs text-slate-500 sm:text-sm'>/month</span>
+            {isFree ? (
+              <span className={`text-3xl font-bold ${priceColor}`}>Free</span>
+            ) : (
+              <>
+                <span>
+                  <span className='text-xs text-slate-500 sm:text-sm'>COP </span>
+                  <span className={`text-3xl font-bold ${priceColor}`}>
+                    {Number(displayPrice).toLocaleString('es-CO')}
+                  </span>
+                </span>
+                <span className='text-xs text-slate-500 sm:text-sm'>{periodLabel}</span>
+              </>
+            )}
           </div>
-          <div className='mt-1 flex items-center gap-2'>
-            <span className='text-xs text-muted-foreground'>
-              COP {Number(yearlyPrice).toFixed(0)}/year
-            </span>
-            {yearlyDiscount > 0 && (
+          {!isFree && yearlyDiscount > 0 && billingPeriod === 'yearly' && (
+            <div className='mt-1 flex items-center gap-2'>
               <Badge className='rounded-full bg-emerald-100 px-1.5 py-0 text-[10px] text-emerald-700'>
                 Save {yearlyDiscount}%
               </Badge>
-            )}
-          </div>
+            </div>
+          )}
           <hr className='-mx-10 my-2 border-slate-200' />
         </div>
 
@@ -156,23 +165,31 @@ export default function PlanCard({
       </CardContent>
 
       {/* FOOTER */}
-      <CardFooter className='mt-auto flex flex-col gap-2 px-6 pb-4 sm:px-3 md:flex-row lg:flex-row'>
-        <Button
-          variant='outline'
-          className='w-full items-center rounded-md border-slate-200 bg-slate-100 text-xs font-normal text-slate-700 hover:bg-slate-200 sm:flex-1'
-        >
-          <Eye className='h-4 w-4' />
-          <span>View</span>
-        </Button>
-
-        <Button
-          className={cn(
-            'w-full rounded-md text-xs text-white sm:flex-1',
-            'bg-gradient-to-r from-[#CF9921] to-[#D2BB6B] font-normal hover:from-yellow-600 hover:to-yellow-700'
-          )}
-        >
-          {isActive ? 'Manage' : 'Upgrade'}
-        </Button>
+      <CardFooter className='mt-auto flex flex-col gap-2 px-6 pb-4 sm:px-3'>
+        {!isFree && onUpgrade && (
+          <Button
+            onClick={onUpgrade}
+            disabled={isCheckingOut}
+            className={cn(
+              'w-full rounded-md text-xs text-white',
+              'bg-gradient-to-r from-[#CF9921] to-[#D2BB6B] font-normal hover:from-yellow-600 hover:to-yellow-700'
+            )}
+          >
+            {isCheckingOut ? (
+              <>
+                <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />
+                Redirecting…
+              </>
+            ) : (
+              `Upgrade to ${tierName}`
+            )}
+          </Button>
+        )}
+        {isFree && (
+          <span className='text-center text-xs text-muted-foreground'>
+            Current default plan
+          </span>
+        )}
       </CardFooter>
     </Card>
   )

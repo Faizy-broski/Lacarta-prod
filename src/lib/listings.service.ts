@@ -214,3 +214,30 @@ export function useFeaturedListings(limit = 12) {
 
   return { listings, loading, error }
 }
+
+// ─── Dashboard: client's own listings ────────────────────────────────────────
+
+export interface ClientListing {
+  id: string
+  title: string
+  subtitle: string | null
+  cover_image: string | null
+  status: string
+  address: string | null
+  category: { name: string } | null
+  created_at: string
+}
+
+export async function fetchClientListings(clientId: string): Promise<ClientListing[]> {
+  const { data, error } = await supabase
+    .from('listings')
+    .select('id, title, subtitle, cover_image, status, address, category:categories!category_id(name), created_at')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[listings.service] fetchClientListings:', error.message)
+    return []
+  }
+  return (data ?? []) as ClientListing[]
+}

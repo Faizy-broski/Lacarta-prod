@@ -1,255 +1,124 @@
-// // components/dashboard/PendingApprovals.tsx
-// import { Star } from 'lucide-react'
-// import { Badge } from '@/components/ui/badge'
-// import { Button } from '@/components/ui/button'
-// import { Card, CardContent, CardHeader } from '@/components/ui/card'
-// export function NewAccounts() {
-//   return (
-//     <>
-//       <Card className='border-none p-0 shadow-none'>
-//         <CardContent className='space-y-4 p-0'>
-//           <Card>
-//             <CardContent>
-//               <CardHeader className='p-0'>
-//                 <div className='flex justify-between'>
-//                   <div>
-//                     <h3 className='text-md font-bold'>New Accounts</h3>
-//                   </div>
-//                   <div>
-//                     <p className='text-sm text-muted-foreground'>
-//                       Last 30 Days
-//                     </p>
-//                   </div>
-//                 </div>
-//               </CardHeader>
-//               <div className='flex items-center gap-3'>
-//                 <div>
-//                   <Star
-//                     size={50}
-//                     className='rounded bg-yellow-50 p-2 text-yellow-500'
-//                   />
-//                 </div>
-//                 <div>
-//                   <div className='flex gap-2'>
-//                     <h2 className='text-md font-bold text-black'>447</h2>
-//                     <p className='font-semibold text-yellow-600'>12.5%</p>
-//                   </div>
-//                   <p className='text-sm text-muted-foreground'>
-//                     New Registered Users
-//                   </p>
-//                 </div>
-//               </div>
-//             </CardContent>
-//             <div className='my-2 grid grid-cols-3 border-t pt-3 text-center'>
-//               <div>
-//                 <h3 className='text-sm font-bold'>678</h3>
-//                 <p className='text-sm font-semibold text-muted-foreground'>
-//                   FaceBook
-//                 </p>
-//               </div>
-//               <div>
-//                 <h3 className='text-sm font-bold'>498</h3>
-//                 <p className='text-sm font-semibold text-muted-foreground'>
-//                   Google
-//                 </p>
-//               </div>
-//               <div>
-//                 <h3 className='text-sm font-bold'>218</h3>
-//                 <p className='text-sm font-semibold text-muted-foreground'>
-//                   Email
-//                 </p>
-//               </div>
-//             </div>
-//           </Card>
-//           <Card>
-//             <CardContent>
-//               <CardHeader className='p-0'>
-//                 <div className='flex justify-between'>
-//                   <div>
-//                     <h3 className='text-md font-bold'>Total Clients</h3>
-//                   </div>
-//                   <div>
-//                     <p className='text-sm text-muted-foreground'>
-//                       Last 30 Days
-//                     </p>
-//                   </div>
-//                 </div>
-//               </CardHeader>
-//               <div className='flex items-center gap-3'>
-//                 <div>
-//                   <Star
-//                     size={50}
-//                     className='rounded bg-yellow-50 p-2 text-yellow-500'
-//                   />
-//                 </div>
-//                 <div>
-//                   <div className='flex gap-2'>
-//                     <h2 className='text-md font-bold text-black'>447</h2>
-//                     <p className='font-semibold text-yellow-600'>12.5%</p>
-//                   </div>
-//                   <p className='text-sm text-muted-foreground'>
-//                     New Registered Users
-//                   </p>
-//                 </div>
-//               </div>
-//             </CardContent>
-//             <div className='my-2 grid grid-cols-5 gap-2 border-t px-1 pt-3 text-center'>
-//               <div>
-//                 <h3 className='text-sm font-bold'>678</h3>
-//                 <p className='text-xs font-semibold text-muted-foreground'>
-//                   FaceBook
-//                 </p>
-//               </div>
-//               <div>
-//                 <h3 className='text-sm font-bold'>678</h3>
-//                 <p className='text-xs font-semibold text-muted-foreground'>
-//                   FaceBook
-//                 </p>
-//               </div>
-//               <div>
-//                 <h3 className='text-sm font-bold'>678</h3>
-//                 <p className='text-xs font-semibold text-muted-foreground'>
-//                   FaceBook
-//                 </p>
-//               </div>
-//               <div>
-//                 <h3 className='text-sm font-bold'>498</h3>
-//                 <p className='text-xs font-semibold text-muted-foreground'>
-//                   Google
-//                 </p>
-//               </div>
-//               <div>
-//                 <h3 className='text-sm font-bold'>218</h3>
-//                 <p className='text-xs font-semibold text-muted-foreground'>
-//                   Email
-//                 </p>
-//               </div>
-//             </div>
-//           </Card>
-//         </CardContent>
-//       </Card>
-//     </>
-//   )
-// }
-// components/dashboard/AccountStats.tsx
-import { Users, ChevronDown, TrendingUp } from 'lucide-react'
+'use client'
+import { useEffect, useState } from 'react'
+import { Users, ChevronDown, TrendingUp, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { supabase } from '@/lib/supabase'
+
+interface AccountData {
+  newUsers: number
+  totalClients: number
+  byCategory: { name: string; count: number }[]
+}
+
+async function fetchAccountData(): Promise<AccountData> {
+  const d30 = new Date(); d30.setDate(d30.getDate() - 30)
+
+  const [newUsers, clients, subsCats] = await Promise.all([
+    supabase.from('users').select('*', { count: 'exact', head: true }).gte('created_at', d30.toISOString()),
+    supabase.from('listing_subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase
+      .from('listing_subscriptions')
+      .select('listing:listings!listing_id(category:categories!category_id(name))')
+      .eq('status', 'active'),
+  ])
+
+  const counts: Record<string, number> = {}
+  for (const row of (subsCats.data ?? []) as any[]) {
+    const name = row.listing?.category?.name ?? 'Other'
+    counts[name] = (counts[name] ?? 0) + 1
+  }
+
+  return {
+    newUsers: newUsers.count ?? 0,
+    totalClients: clients.count ?? 0,
+    byCategory: Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count })),
+  }
+}
 
 export function AccountStats() {
+  const [data, setData] = useState<AccountData | null>(null)
+
+  useEffect(() => {
+    fetchAccountData().then(setData)
+  }, [])
+
+  if (!data) {
+    return (
+      <div className='space-y-6'>
+        {[0, 1].map((i) => (
+          <Card key={i} className='rounded-2xl bg-[#F9FAFB] px-4 shadow-sm'>
+            <div className='flex items-center justify-center py-12'>
+              <Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
+            </div>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className='space-y-6'>
-      {/* ================= NEW ACCOUNTS ================= */}
+      {/* New Accounts */}
       <Card className='rounded-2xl bg-[#F9FAFB] px-4 shadow-sm'>
-        {/* Header */}
         <div className='mb-2 flex items-center justify-between'>
           <h2 className='font-antigua text-xl font-semibold'>New Accounts</h2>
           <div className='flex items-center gap-1 text-sm text-muted-foreground'>
-            Last 30 Days
-            <ChevronDown className='h-4 w-4' />
+            Last 30 Days <ChevronDown className='h-4 w-4' />
           </div>
         </div>
-
-        {/* Main KPI */}
         <div className='flex items-center gap-6'>
           <div className='flex h-16 w-16 items-center justify-center rounded-2xl bg-green-100'>
             <Users className='h-8 w-8 text-green-600' />
           </div>
-
           <div>
             <div className='flex items-center gap-3'>
-              <span className='text-4xl font-semibold text-gray-900'>847</span>
+              <span className='text-4xl font-semibold text-gray-900'>{data.newUsers.toLocaleString()}</span>
               <span className='flex items-center gap-1 font-medium text-green-600'>
-                <TrendingUp className='h-3 w-3' /> +12.5%
+                <TrendingUp className='h-3 w-3' /> new
               </span>
             </div>
-
-            <p className='mt-1 text-sm text-muted-foreground'>
-              new registered users
-            </p>
+            <p className='mt-1 text-sm text-muted-foreground'>new registered users</p>
           </div>
         </div>
-
-        {/* Divider */}
         <div className='my-2 border-t' />
-
-        {/* Bottom Stats */}
-        <div className='grid grid-cols-3 text-center'>
-          <div>
-            <p className='text-xl font-semibold'>412</p>
-            <p className='text-sm text-muted-foreground'>Facebook</p>
-          </div>
-          <div>
-            <p className='text-xl font-semibold'>298</p>
-            <p className='text-sm text-muted-foreground'>Google</p>
-          </div>
-          <div>
-            <p className='text-xl font-semibold'>137</p>
-            <p className='text-sm text-muted-foreground'>Email</p>
-          </div>
+        <div className='pb-3 text-center text-xs text-muted-foreground'>
+          All sign-up sources tracked via Supabase Auth
         </div>
       </Card>
 
-      {/* ================= TOTAL CLIENTS ================= */}
+      {/* Total Clients (active subscriptions by category) */}
       <Card className='rounded-2xl bg-[#F9FAFB] px-4 shadow-sm'>
-        {/* Header */}
         <div className='mb-2 flex items-center justify-between'>
-          <h2 className='font-antigua text-xl font-semibold'>Total Clients</h2>
+          <h2 className='font-antigua text-xl font-semibold'>Active Subscriptions</h2>
           <div className='flex items-center gap-1 text-sm text-muted-foreground'>
-            Last 30 Days
-            <ChevronDown className='h-4 w-4' />
+            All time <ChevronDown className='h-4 w-4' />
           </div>
         </div>
-
-        {/* Main KPI */}
         <div className='flex items-center gap-6'>
           <div className='flex h-16 w-16 items-center justify-center rounded-2xl bg-yellow-100'>
             <Users className='h-8 w-8 text-yellow-600' />
           </div>
-
           <div>
             <div className='flex items-center gap-3'>
-              <span className='text-4xl font-semibold text-gray-900'>447</span>
+              <span className='text-4xl font-semibold text-gray-900'>{data.totalClients.toLocaleString()}</span>
               <span className='flex items-center gap-1 font-medium text-yellow-600'>
-                <TrendingUp className='h-3 w-3' />
-                +12.5%
+                <TrendingUp className='h-3 w-3' /> active
               </span>
             </div>
-
-            <p className='mt-1 text-sm text-muted-foreground'>
-              listing of clients
-            </p>
+            <p className='mt-1 text-sm text-muted-foreground'>paying client listings</p>
           </div>
         </div>
-
-        {/* Divider */}
         <div className='my-2 border-t' />
-
-        {/* Bottom Stats */}
-        <div className='grid grid-cols-5 text-center'>
-          <div>
-            <p className='text-lg font-semibold'>412</p>
-            <p className='truncate text-xs text-muted-foreground'>Gastronomy</p>
-          </div>
-          <div>
-            <p className='text-lg font-semibold'>298</p>
-            <p className='truncate text-xs text-muted-foreground'>
-              Real Estate
-            </p>
-          </div>
-          <div>
-            <p className='text-lg font-semibold'>137</p>
-            <p className='text-xs text-muted-foreground'>Beaches</p>
-          </div>
-          <div>
-            <p className='text-lg font-semibold'>137</p>
-            <p className='truncate text-xs text-muted-foreground'>
-              Accommodations
-            </p>
-          </div>
-          <div>
-            <p className='text-lg font-semibold'>137</p>
-            <p className='text-xs text-muted-foreground'>Beaches</p>
-          </div>
+        <div className={`grid pb-3 text-center`} style={{ gridTemplateColumns: `repeat(${Math.min(data.byCategory.length, 5)}, 1fr)` }}>
+          {data.byCategory.map((c) => (
+            <div key={c.name}>
+              <p className='text-lg font-semibold'>{c.count}</p>
+              <p className='truncate text-xs text-muted-foreground'>{c.name}</p>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

@@ -1,40 +1,37 @@
-import { StringColorFormat } from '@faker-js/faker'
 import { toast } from 'sonner'
 import { supabase } from '../supabase/supabase'
 import { ROLE_REDIRECT, getAuthErrorMessage } from './auth.constants'
 import { useAuthStore } from './auth.store'
-import { AuthUser } from './auth.types'
+import { AuthUser, UserRole } from './auth.types'
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
-  // if (error || !data.user) throw error
   if (error || !data.user) {
     const code = (error as any)?.code ?? ''
     toast.error(getAuthErrorMessage(code))
     return
   }
 
+  // Fetch DB profile in parallel — don't block on it
   const { data: userData } = await supabase
     .from('users')
     .select('full_name, role, bio, profile_photo_url')
     .eq('id', data.user.id)
-    .single()
+    .maybeSingle()
 
-  const role = userData?.role
-  const name = userData?.full_name
-  const profile_photo_url = userData?.profile_photo_url
-  const bio = userData?.bio
+  // Fall back to user_metadata if the DB row hasn't been created yet
+  const role: UserRole =
+    userData?.role ??
+    (data.user.user_metadata?.role as UserRole) ??
+    'subscriber'
 
   const user: AuthUser = {
     accountNo: data.user.id,
     email: data.user.email ?? '',
-    name: name ?? '',
-    bio: bio ?? '',
-    profile_photo_url: profile_photo_url ?? '',
+    name: userData?.full_name ?? data.user.user_metadata?.full_name ?? '',
+    bio: userData?.bio ?? '',
+    profile_photo_url: userData?.profile_photo_url ?? '',
     role: [role],
     exp: Date.now() + 24 * 60 * 60 * 1000,
   }

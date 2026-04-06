@@ -34,6 +34,7 @@ import {
   Hash,
   Upload,
   X,
+  Star,
 } from 'lucide-react'
 import { useRouter, useParams } from 'next/navigation'
 import { toast } from 'sonner'
@@ -69,6 +70,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { useListingPlan } from '@/lib/hooks/useListingPlan'
 
 // import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor'
 
@@ -93,9 +95,24 @@ type SubCategory = { id: string; name: string }
 type RoadMapItem = { time: string; activity: string }
 type RoadMapDay = { day: number; title: string; items: RoadMapItem[] }
 type FAQ = { question: string; answer: string }
+type DealType = 'discount' | 'package' | 'promotion'
+type ExperienceItem = { image: string; title: string; url: string }
 type Deal = {
   title: string
   subtitle: string
+  deal_type: DealType
+  description: string
+  start_date: string
+  end_date: string
+  discount: string
+  coupon_code: string
+  image: string
+  offers_title: string
+  offers_description: string
+  experience_title: string
+  experience_included: ExperienceItem[]
+  button_link: string
+  // legacy field kept for backward compat
   percent_off: string
   acquire_link: string
 }
@@ -104,6 +121,29 @@ type MenuItem = { name: string; description: string; price: string }
 type ReservationLink = { platform: string; url: string }
 type SocialLink = { platform: string; url: string }
 type ListingStatus = 'active' | 'inactive' | 'pending' | 'featured'
+type AlsoAvailableOnItem = { name: string; url: string }
+type FeaturedInItem = { name: string; url: string }
+type BoatingInfo = { capacity_type: string; season: string; what_to_bring: string }
+type WhatsIncludedSection = { title: string; items: string[] }
+type ImportantInfoSection = { title: string; items: string[] }
+type DeveloperInfo = {
+  name: string
+  contact: string
+  website: string
+  logo: string
+  description: string
+  button_label: string
+}
+type AppointmentInfo = { title: string; content: string; link: string }
+type WebsiteCTA = { title: string; content: string; link: string }
+type BookWithUs = { title: string; button_link: string; why_title: string; why_link: string }
+type VideoUrl = { url: string; label: string }
+type RoomType = { room_type: string; option: string }
+type BoatDetail = { content: string }
+type PriceTier = '$' | '$$' | '$$$' | '$$$$'
+type FeaturePostType = 'reserve' | 'menu'
+type AvailabilityStatus = 'available' | 'unavailable' | 'coming_soon' | 'sold' | 'rented'
+type REListingType = 'rent' | 'sale' | 'rent_or_sale'
 
 interface ListingForm {
   title: string
@@ -131,6 +171,7 @@ interface ListingForm {
   instagram: string
   extra_social_links: SocialLink[]
   reservation_links: ReservationLink[]
+  direct_links: ReservationLink[]
   start_time: string
   end_time: string
   pickup_time: string
@@ -147,7 +188,46 @@ interface ListingForm {
   amenities: string[]
   neighborhoods: string[]
   atmosphere: string[]
+  service_title: string
+  amenities_title: string
+  feature_title: string
+  details_title: string
+  boat_details: BoatDetail[]
+  price_tier: PriceTier
+  address_url: string
+  is_feature: boolean
+  feature_logo: string
+  feature_post_type: FeaturePostType
   menu_items: MenuItem[]
+  menu_qr_code: string
+  menu_file_url: string
+  menu_button_title: string
+  hours_status: string
+  hours_note: string
+  book_with_us: BookWithUs
+  availability_button_title: string
+  rnt_no: string
+  inventory: string
+  also_available_on: AlsoAvailableOnItem[]
+  featured_in: FeaturedInItem[]
+  boating_info: BoatingInfo
+  whats_included: WhatsIncludedSection
+  important_info: ImportantInfoSection
+  room_types: RoomType[]
+  room_types_title: string
+  // Real Estate specific
+  re_listing_type: REListingType
+  bedrooms: string
+  bathrooms: string
+  sqft: string
+  strata: string
+  availability_status: AvailabilityStatus
+  unit_specs: string
+  developer_info: DeveloperInfo
+  appointment_info: AppointmentInfo
+  website_cta: WebsiteCTA
+  blueprint_url: string
+  video_urls: VideoUrl[]
 }
 
 type ValidationErrors = Partial<
@@ -223,7 +303,47 @@ const EMPTY_FORM: ListingForm = {
   amenities: [],
   neighborhoods: [],
   atmosphere: [],
+  service_title: '',
+  amenities_title: '',
+  feature_title: '',
+  details_title: '',
+  boat_details: [],
+  price_tier: '$',
+  address_url: '',
+  is_feature: false,
+  feature_logo: '',
+  feature_post_type: 'reserve',
   menu_items: [],
+  menu_qr_code: '',
+  menu_file_url: '',
+  menu_button_title: '',
+  hours_status: '',
+  hours_note: '',
+  book_with_us: { title: '', button_link: '', why_title: '', why_link: '' },
+  availability_button_title: '',
+  rnt_no: '',
+  inventory: '',
+  also_available_on: [],
+  featured_in: [],
+  direct_links: [],
+  boating_info: { capacity_type: '', season: '', what_to_bring: '' },
+  whats_included: { title: '', items: [] },
+  important_info: { title: '', items: [] },
+  room_types: [],
+  room_types_title: '',
+  // Real Estate
+  re_listing_type: 'sale',
+  bedrooms: '',
+  bathrooms: '',
+  sqft: '',
+  strata: '',
+  availability_status: 'available',
+  unit_specs: '',
+  developer_info: { name: '', contact: '', website: '', logo: '', description: '', button_label: '' },
+  appointment_info: { title: '', content: '', link: '' },
+  website_cta: { title: '', content: '', link: '' },
+  blueprint_url: '',
+  video_urls: [],
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -772,6 +892,14 @@ function FAQsEditor({
 
 // ─── Deals Editor ────────────────────────────────────────────────────────────
 
+const EMPTY_DEAL: Deal = {
+  title: '', subtitle: '', deal_type: 'discount', description: '',
+  start_date: '', end_date: '', discount: '', coupon_code: '', image: '',
+  offers_title: '', offers_description: '', experience_title: '',
+  experience_included: [], button_link: '',
+  percent_off: '', acquire_link: '',
+}
+
 function DealsEditor({
   deals,
   onChange,
@@ -779,35 +907,27 @@ function DealsEditor({
   deals: Deal[]
   onChange: (v: Deal[]) => void
 }) {
-  const add = () =>
-    onChange([
-      ...deals,
-      { title: '', subtitle: '', percent_off: '', acquire_link: '' },
-    ])
-  const update = (i: number, field: keyof Deal, val: string) =>
+  const add = () => onChange([...deals, { ...EMPTY_DEAL }])
+  const update = <K extends keyof Deal>(i: number, field: K, val: Deal[K]) =>
     onChange(deals.map((d, idx) => (idx === i ? { ...d, [field]: val } : d)))
   const remove = (i: number) => onChange(deals.filter((_, idx) => idx !== i))
+
   return (
-    <div className='space-y-3'>
+    <div className='space-y-4'>
       {deals.map((deal, i) => (
-        <div key={i} className='space-y-3 rounded-md border bg-muted/30 p-4'>
+        <div key={i} className='space-y-4 rounded-md border bg-muted/30 p-4'>
+          {/* Header */}
           <div className='flex items-center justify-between'>
-            <span className='text-xs font-medium text-muted-foreground'>
-              Deal #{i + 1}
-            </span>
-            <Button
-              type='button'
-              variant='ghost'
-              size='icon'
-              className='h-7 w-7'
-              onClick={() => remove(i)}
-            >
+            <span className='text-xs font-medium text-muted-foreground'>Deal #{i + 1}</span>
+            <Button type='button' variant='ghost' size='icon' className='h-7 w-7' onClick={() => remove(i)}>
               <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
             </Button>
           </div>
-          <div className='grid grid-cols-2 gap-3'>
+
+          {/* Title + Subtitle + Deal Type */}
+          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
             <Input
-              placeholder='Deal title'
+              placeholder='Title'
               value={deal.title}
               onChange={(e) => update(i, 'title', e.target.value)}
               className='rounded-md'
@@ -818,25 +938,173 @@ function DealsEditor({
               onChange={(e) => update(i, 'subtitle', e.target.value)}
               className='rounded-md'
             />
-            <div className='relative'>
-              <Percent className='absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground' />
+          </div>
+
+          {/* Deal Type radio */}
+          <div className='flex items-center gap-6'>
+            <span className='text-xs text-muted-foreground'>Deal Type</span>
+            {(['discount', 'package', 'promotion'] as DealType[]).map((t) => (
+              <label key={t} className='flex cursor-pointer items-center gap-1.5 text-xs capitalize'>
+                <input
+                  type='radio'
+                  name={`deal-type-${i}`}
+                  value={t}
+                  checked={deal.deal_type === t}
+                  onChange={() => update(i, 'deal_type', t)}
+                  className='accent-[#CF9921]'
+                />
+                {t}
+              </label>
+            ))}
+          </div>
+
+          {/* Description */}
+          <Textarea
+            placeholder='Deal description…'
+            value={deal.description}
+            onChange={(e) => update(i, 'description', e.target.value)}
+            className='rounded-md'
+            rows={3}
+          />
+
+          {/* Dates + Discount + Coupon */}
+          <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+            <div>
+              <Label className='mb-1 block text-xs'>Start Date</Label>
               <Input
-                type='number'
-                placeholder='Discount %'
-                min={0}
-                max={100}
-                value={deal.percent_off}
-                onChange={(e) => update(i, 'percent_off', e.target.value)}
-                className='rounded-md pl-8'
+                type='date'
+                value={deal.start_date}
+                onChange={(e) => update(i, 'start_date', e.target.value)}
+                className='rounded-md'
+              />
+            </div>
+            <div>
+              <Label className='mb-1 block text-xs'>End Date</Label>
+              <Input
+                type='date'
+                value={deal.end_date}
+                onChange={(e) => update(i, 'end_date', e.target.value)}
+                className='rounded-md'
               />
             </div>
             <Input
-              type='url'
-              placeholder='Acquire link URL'
-              value={deal.acquire_link}
-              onChange={(e) => update(i, 'acquire_link', e.target.value)}
+              placeholder='Discount (e.g. 20% or 50,000 COP)'
+              value={deal.discount}
+              onChange={(e) => update(i, 'discount', e.target.value)}
               className='rounded-md'
             />
+            <Input
+              placeholder='Coupon Code'
+              value={deal.coupon_code}
+              onChange={(e) => update(i, 'coupon_code', e.target.value)}
+              className='rounded-md'
+            />
+          </div>
+
+          {/* Deal Image + Button Link */}
+          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+            <div>
+              <Label className='mb-1 block text-xs'>Deal Image URL</Label>
+              <Input
+                type='url'
+                placeholder='https://…/deal-image.jpg'
+                value={deal.image}
+                onChange={(e) => update(i, 'image', e.target.value)}
+                className='rounded-md'
+              />
+            </div>
+            <div>
+              <Label className='mb-1 block text-xs'>Button Link</Label>
+              <Input
+                type='url'
+                placeholder='https://…/book'
+                value={deal.button_link}
+                onChange={(e) => update(i, 'button_link', e.target.value)}
+                className='rounded-md'
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Offers block */}
+          <div>
+            <Label className='mb-2 block text-xs font-medium'>Offers</Label>
+            <Input
+              placeholder='Offers title'
+              value={deal.offers_title}
+              onChange={(e) => update(i, 'offers_title', e.target.value)}
+              className='mb-2 rounded-md'
+            />
+            <Textarea
+              placeholder='Offers description…'
+              value={deal.offers_description}
+              onChange={(e) => update(i, 'offers_description', e.target.value)}
+              className='rounded-md'
+              rows={3}
+            />
+          </div>
+
+          {/* Experience Included */}
+          <div>
+            <Label className='mb-2 block text-xs font-medium'>Experience Included</Label>
+            <Input
+              placeholder='Experience title'
+              value={deal.experience_title}
+              onChange={(e) => update(i, 'experience_title', e.target.value)}
+              className='mb-2 rounded-md'
+            />
+            <div className='space-y-2'>
+              {deal.experience_included.map((exp, ei) => (
+                <div key={ei} className='flex gap-2'>
+                  <Input
+                    placeholder='Image URL'
+                    value={exp.image}
+                    onChange={(e) => {
+                      const updated = deal.experience_included.map((x, xi) =>
+                        xi === ei ? { ...x, image: e.target.value } : x
+                      )
+                      update(i, 'experience_included', updated)
+                    }}
+                    className='flex-1 rounded-md'
+                  />
+                  <Input
+                    placeholder='Title'
+                    value={exp.title}
+                    onChange={(e) => {
+                      const updated = deal.experience_included.map((x, xi) =>
+                        xi === ei ? { ...x, title: e.target.value } : x
+                      )
+                      update(i, 'experience_included', updated)
+                    }}
+                    className='flex-1 rounded-md'
+                  />
+                  <Input
+                    type='url'
+                    placeholder='URL'
+                    value={exp.url}
+                    onChange={(e) => {
+                      const updated = deal.experience_included.map((x, xi) =>
+                        xi === ei ? { ...x, url: e.target.value } : x
+                      )
+                      update(i, 'experience_included', updated)
+                    }}
+                    className='flex-1 rounded-md'
+                  />
+                  <Button
+                    type='button' variant='ghost' size='icon' className='h-9 w-9 shrink-0'
+                    onClick={() => update(i, 'experience_included', deal.experience_included.filter((_, xi) => xi !== ei))}
+                  >
+                    <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
+                  </Button>
+                </div>
+              ))}
+              <AddButton
+                onClick={() => update(i, 'experience_included', [...deal.experience_included, { image: '', title: '', url: '' }])}
+              >
+                Add Experience Item
+              </AddButton>
+            </div>
           </div>
         </div>
       ))}
@@ -1137,6 +1405,64 @@ function RoadMapEditor({
   )
 }
 
+// ─── What's Included / Important Info Editor ─────────────────────────────────
+
+function SimpleListEditor({
+  section,
+  onChange,
+  titlePlaceholder,
+  itemPlaceholder,
+}: {
+  section: WhatsIncludedSection | ImportantInfoSection
+  onChange: (v: WhatsIncludedSection | ImportantInfoSection) => void
+  titlePlaceholder: string
+  itemPlaceholder: string
+}) {
+  const addItem = () => onChange({ ...section, items: [...section.items, ''] })
+  const updateItem = (i: number, val: string) =>
+    onChange({ ...section, items: section.items.map((it, idx) => (idx === i ? val : it)) })
+  const removeItem = (i: number) =>
+    onChange({ ...section, items: section.items.filter((_, idx) => idx !== i) })
+
+  return (
+    <div className='space-y-3'>
+      <FormField label='Section Title'>
+        <Input
+          placeholder={titlePlaceholder}
+          value={section.title}
+          onChange={(e) => onChange({ ...section, title: e.target.value })}
+          className='rounded-md'
+        />
+      </FormField>
+      <div className='space-y-2'>
+        {section.items.map((item, i) => (
+          <div key={i} className='flex items-center gap-2'>
+            <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/20 text-xs font-bold text-gold'>
+              {i + 1}
+            </span>
+            <Input
+              placeholder={itemPlaceholder}
+              value={item}
+              onChange={(e) => updateItem(i, e.target.value)}
+              className='flex-1 rounded-md'
+            />
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon'
+              className='h-8 w-8 shrink-0'
+              onClick={() => removeItem(i)}
+            >
+              <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
+            </Button>
+          </div>
+        ))}
+        <AddButton onClick={addItem}>Add Item</AddButton>
+      </div>
+    </div>
+  )
+}
+
 // ─── Travel Tips Editor ───────────────────────────────────────────────────────
 
 function TravelTipsEditor({
@@ -1388,6 +1714,7 @@ function RichTextEditor({
     onUpdate({ editor }: any) {
       onChange(editor.getHTML())
     },
+    immediatelyRender: false,
   })
 
   useEffect(() => {
@@ -1569,7 +1896,7 @@ function RichTextEditor({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export function ListingFormPage() {
+export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = {}) {
   const router = useRouter()
   const { id } = useParams<{ id?: string }>()
   const isEdit = !!id
@@ -1584,6 +1911,16 @@ export function ListingFormPage() {
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>('client')
+
+  // If fixedCategory is set, auto-select and lock the category
+  useEffect(() => {
+    if (fixedCategory && categories.length > 0) {
+      const cat = categories.find(c => c.name.toLowerCase() === fixedCategory.toLowerCase())
+      if (cat && form.category_id !== cat.id) {
+        setForm(prev => ({ ...prev, category_id: cat.id }))
+      }
+    }
+  }, [fixedCategory, categories])
 
   const set = useCallback(
     <K extends keyof ListingForm>(field: K, value: ListingForm[K]) => {
@@ -1619,12 +1956,19 @@ export function ListingFormPage() {
     [categories, form.category_id]
   )
   const selectedCategoryName = selectedCategory?.name?.toLowerCase() ?? ''
-  const isActivities =
-    selectedCategoryName.includes('activit') ||
-    selectedCategoryName.includes('boating')
-  const isBeach = selectedCategoryName.includes('beach')
+  const isBoating    = selectedCategoryName.includes('boating')
+  const isActivities = selectedCategoryName.includes('activit') || isBoating
+  const isBeach      = selectedCategoryName.includes('beach')
   const isGastronomy = selectedCategoryName.includes('gastronom')
   const isRealEstate = selectedCategoryName.includes('real estate')
+  const isHotel      = !isActivities && !isBeach && !isGastronomy && !isRealEstate && !!form.category_id
+
+  // ── Plan enforcement ──
+  const { hasFeature } = useListingPlan(
+    id,
+    selectedCategory?.name ?? '',
+    currentUserRole
+  )
   const categorySlug =
     selectedCategory?.name
       ?.toLowerCase()
@@ -1734,6 +2078,7 @@ export function ListingFormPage() {
             instagram: data.instagram ?? '',
             extra_social_links: data.extra_social_links ?? [],
             reservation_links: data.reservation_links ?? [],
+            direct_links: data.direct_links ?? [],
             start_time: data.start_time ?? '',
             end_time: data.end_time ?? '',
             pickup_time: data.pickup_time ?? '',
@@ -1748,9 +2093,65 @@ export function ListingFormPage() {
             key_features: data.key_features ?? [],
             services: data.services ?? [],
             amenities: data.amenities ?? [],
-            neighborhoods: data.neighborhoods[0] ?? '',
+            neighborhoods: data.neighborhoods ?? [],
             atmosphere: data.atmosphere ?? [],
+            service_title: data.service_title ?? '',
+            amenities_title: data.amenities_title ?? '',
+            feature_title: data.feature_title ?? '',
+            details_title: data.details_title ?? '',
+            boat_details: data.boat_details ?? [],
+            price_tier: data.price_tier ?? '$',
+            address_url: data.address_url ?? '',
+            is_feature: data.is_feature ?? false,
+            feature_logo: data.feature_logo ?? '',
+            feature_post_type: data.feature_post_type ?? 'reserve',
             menu_items: data.menu_items ?? [],
+            menu_qr_code: data.menu_qr_code ?? '',
+            menu_file_url: data.menu_file_url ?? '',
+            menu_button_title: data.menu_button_title ?? '',
+            hours_status: data.hours_status ?? '',
+            hours_note: data.hours_note ?? '',
+            book_with_us: {
+              title: data.book_with_us?.title ?? '',
+              button_link: data.book_with_us?.button_link ?? '',
+              why_title: data.book_with_us?.why_title ?? '',
+              why_link: data.book_with_us?.why_link ?? '',
+            },
+            availability_button_title: data.availability_button_title ?? '',
+            rnt_no: data.rnt_no ?? '',
+            inventory: data.inventory ?? '',
+            also_available_on: data.also_available_on ?? [],
+            featured_in: data.featured_in ?? [],
+            boating_info: data.boating_info ?? { capacity_type: '', season: '', what_to_bring: '' },
+            room_types: data.room_types ?? [],
+            room_types_title: data.room_types_title ?? '',
+            bedrooms: data.bedrooms != null ? String(data.bedrooms) : '',
+            bathrooms: data.bathrooms != null ? String(data.bathrooms) : '',
+            sqft: data.sqft != null ? String(data.sqft) : '',
+            strata: data.strata != null ? String(data.strata) : '',
+            availability_status: data.availability_status ?? 'available',
+            unit_specs: data.unit_specs ?? '',
+            re_listing_type: (data.re_listing_type as REListingType) ?? 'sale',
+            developer_info: {
+              name: data.developer_info?.name ?? '',
+              contact: data.developer_info?.contact ?? '',
+              website: data.developer_info?.website ?? '',
+              logo: data.developer_info?.logo ?? '',
+              description: data.developer_info?.description ?? '',
+              button_label: data.developer_info?.button_label ?? '',
+            },
+            appointment_info: {
+              title: data.appointment_info?.title ?? '',
+              content: data.appointment_info?.content ?? '',
+              link: data.appointment_info?.link ?? '',
+            },
+            website_cta: {
+              title: data.website_cta?.title ?? '',
+              content: data.website_cta?.content ?? '',
+              link: data.website_cta?.link ?? '',
+            },
+            blueprint_url: data.blueprint_url ?? '',
+            video_urls: data.video_urls ?? [],
           })
         }
         setLoading(false)
@@ -1858,7 +2259,7 @@ export function ListingFormPage() {
       travel_duration: form.travel_duration || null,
       beach_start: form.beach_start || null,
       beach_end: form.beach_end || null,
-      weekly_hours: isGastronomy ? form.weekly_hours : null,
+      weekly_hours: (isGastronomy || isHotel) ? form.weekly_hours : null,
       faqs: form.faqs,
       deals: form.deals,
       road_map: form.road_map,
@@ -1868,7 +2269,45 @@ export function ListingFormPage() {
       amenities: form.amenities,
       neighborhoods: form.neighborhoods,
       atmosphere: form.atmosphere,
+      service_title: form.service_title.trim() || null,
+      amenities_title: form.amenities_title.trim() || null,
+      feature_title: form.feature_title.trim() || null,
+      details_title: isBoating ? (form.details_title.trim() || null) : null,
+      boat_details: isBoating ? form.boat_details : [],
+      price_tier: form.price_tier,
+      address_url: form.address_url.trim() || null,
+      is_feature: form.is_feature,
+      feature_logo: form.feature_logo || null,
+      feature_post_type: form.feature_post_type,
       menu_items: isGastronomy ? form.menu_items : [],
+      menu_qr_code: isGastronomy ? (form.menu_qr_code || null) : null,
+      menu_file_url: isGastronomy ? (form.menu_file_url || null) : null,
+      menu_button_title: isGastronomy ? (form.menu_button_title || null) : null,
+      hours_status: (isGastronomy || isHotel) ? (form.hours_status || null) : null,
+      hours_note: (isGastronomy || isHotel) ? (form.hours_note || null) : null,
+      book_with_us: (isGastronomy || isHotel || isBeach || isBoating) ? form.book_with_us : null,
+      availability_button_title: form.availability_button_title || null,
+      rnt_no: form.rnt_no || null,
+      inventory: form.inventory || null,
+      also_available_on: (isGastronomy || isActivities) ? form.also_available_on : [],
+      featured_in: isGastronomy ? form.featured_in : [],
+      direct_links: (isHotel || isBeach || isBoating) ? form.direct_links : [],
+      boating_info: isBoating ? form.boating_info : null,
+      room_types: isHotel ? form.room_types : [],
+      room_types_title: isHotel ? (form.room_types_title.trim() || null) : null,
+      // Real Estate
+      re_listing_type: isRealEstate ? form.re_listing_type : null,
+      bedrooms: isRealEstate && form.bedrooms !== '' ? Number(form.bedrooms) : null,
+      bathrooms: isRealEstate && form.bathrooms !== '' ? Number(form.bathrooms) : null,
+      sqft: isRealEstate && form.sqft !== '' ? Number(form.sqft) : null,
+      strata: isRealEstate && form.strata !== '' ? Number(form.strata) : null,
+      availability_status: isRealEstate ? form.availability_status : null,
+      unit_specs: isRealEstate ? (form.unit_specs || null) : null,
+      developer_info: isRealEstate ? form.developer_info : null,
+      appointment_info: isRealEstate ? form.appointment_info : null,
+      website_cta: isRealEstate ? form.website_cta : null,
+      blueprint_url: isRealEstate ? (form.blueprint_url || null) : null,
+      video_urls: isRealEstate ? form.video_urls : [],
     }
     if (!isEdit && currentUserId) payload.client_id = currentUserId
 
@@ -1884,7 +2323,7 @@ export function ListingFormPage() {
     setSaving(false)
     if (!error) {
       toast.success(isEdit ? 'Listing updated' : 'Listing created')
-      router.push('/listings')
+      router.push('/dashboard/listings')
     } else {
       toast.error('Failed to save listing', { description: error.message })
     }
@@ -1918,7 +2357,7 @@ export function ListingFormPage() {
                 variant='ghost'
                 size='icon'
                 className='shrink-0 rounded-md'
-                onClick={() => router.push('/listings')}
+                onClick={() => router.push('/dashboard/listings')}
               >
                 <ArrowLeft className='h-4 w-4' />
               </Button>
@@ -1957,7 +2396,7 @@ export function ListingFormPage() {
                 variant='outline'
                 size='sm'
                 className='rounded-md'
-                onClick={() => router.push('/listings')}
+                onClick={() => router.push('/dashboard/listings')}
               >
                 Cancel
               </Button>
@@ -2020,37 +2459,45 @@ export function ListingFormPage() {
               />
             </FormField>
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-              <FormField label='Category' required error={errors.category_id}>
-                <Select
-                  value={form.category_id}
-                  onValueChange={(v) => {
-                    set('category_id', v)
-                    set('sub_category_id', '')
-                    set('category_tags', [])
-                    set('key_features', [])
-                    set('services', [])
-                    set('amenities', [])
-                    set('neighborhoods', [])
-                    set('atmosphere', [])
-                  }}
-                >
-                  <SelectTrigger
-                    className={cn(
-                      'rounded-md w-full',
-                      errors.category_id && 'border-destructive'
-                    )}
+              {fixedCategory ? (
+                <FormField label='Category' required error={errors.category_id}>
+                  <div className='flex items-center gap-2'>
+                    <span className='font-semibold capitalize'>{fixedCategory.replace('_', ' ')}</span>
+                  </div>
+                </FormField>
+              ) : (
+                <FormField label='Category' required error={errors.category_id}>
+                  <Select
+                    value={form.category_id}
+                    onValueChange={(v) => {
+                      set('category_id', v)
+                      set('sub_category_id', '')
+                      set('category_tags', [])
+                      set('key_features', [])
+                      set('services', [])
+                      set('amenities', [])
+                      set('neighborhoods', [])
+                      set('atmosphere', [])
+                    }}
                   >
-                    <SelectValue placeholder='Select category…' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
+                    <SelectTrigger
+                      className={cn(
+                        'rounded-md w-full',
+                        errors.category_id && 'border-destructive'
+                      )}
+                    >
+                      <SelectValue placeholder='Select category…' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              )}
               <FormField
                 label='Sub-Category'
                 required
@@ -2132,17 +2579,19 @@ export function ListingFormPage() {
             </FormField>
           </SectionCard>
 
-          {/* S2 — Description & Story */}
-          <SectionCard
-            icon={<FileText className='h-5 w-5' />}
-            title='Description & Story'
-            description='Rich description — use the toolbar for bold, italic, lists and headings'
-          >
-            <RichTextEditor
-              value={form.description}
-              onChange={(v) => set('description', v)}
-            />
-          </SectionCard>
+          {/* S2 — Description & Story (Standard+) */}
+          {hasFeature(isRealEstate ? 're_full_description' : 'about_description') && (
+            <SectionCard
+              icon={<FileText className='h-5 w-5' />}
+              title='Description & Story'
+              description='Rich description — use the toolbar for bold, italic, lists and headings'
+            >
+              <RichTextEditor
+                value={form.description}
+                onChange={(v) => set('description', v)}
+              />
+            </SectionCard>
+          )}
 
           {/* S3 — Image Gallery */}
           <SectionCard
@@ -2168,19 +2617,114 @@ export function ListingFormPage() {
                 error={errors.cover_image}
               />
             </FormField>
-            <Separator />
-            <FormField
-              label='Photo Gallery'
-              hint='Add more photos — drag & drop or click, multiple files supported'
-            >
-              <GalleryUploader
-                images={form.images}
-                onChange={(v) => set('images', v)}
-                categorySlug={categorySlug}
-                disabled={!form.category_id}
-              />
-            </FormField>
+            {hasFeature('gallery') && (
+              <>
+                <Separator />
+                <FormField
+                  label='Photo Gallery'
+                  hint='Add more photos — drag & drop or click, multiple files supported'
+                >
+                  <GalleryUploader
+                    images={form.images}
+                    onChange={(v) => set('images', v)}
+                    categorySlug={categorySlug}
+                    disabled={!form.category_id}
+                  />
+                </FormField>
+              </>
+            )}
           </SectionCard>
+
+          {/* Real Estate Specs (FREE for RE only) */}
+          {isRealEstate && (
+            <SectionCard
+              icon={<Hash className='h-5 w-5' />}
+              title='Property Specifications'
+              description='Listing type, strata, bedrooms, bathrooms, square footage and availability'
+            >
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='Listing Type' required>
+                  <Select
+                    value={form.re_listing_type}
+                    onValueChange={(v) => set('re_listing_type', v as REListingType)}
+                  >
+                    <SelectTrigger className='rounded-md'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='sale'>For Sale</SelectItem>
+                      <SelectItem value='rent'>For Rent</SelectItem>
+                      <SelectItem value='rent_or_sale'>For Rent or Sale</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormField>
+                <FormField label='Availability'>
+                  <Select
+                    value={form.availability_status}
+                    onValueChange={(v) => set('availability_status', v as AvailabilityStatus)}
+                  >
+                    <SelectTrigger className='rounded-md'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(['available','unavailable','coming_soon','sold','rented'] as const).map((s) => (
+                        <SelectItem key={s} value={s} className='capitalize'>
+                          {s.replace('_', ' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              </div>
+              <Separator />
+              <div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
+                <FormField label='Bedrooms'>
+                  <Input
+                    type='number' min={0}
+                    placeholder='3'
+                    value={form.bedrooms}
+                    onChange={(e) => set('bedrooms', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Bathrooms'>
+                  <Input
+                    type='number' min={0}
+                    placeholder='2'
+                    value={form.bathrooms}
+                    onChange={(e) => set('bathrooms', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Sq. Ft.'>
+                  <Input
+                    type='number' min={0}
+                    placeholder='1200'
+                    value={form.sqft}
+                    onChange={(e) => set('sqft', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Strata (1–6)' hint='Colombian socioeconomic stratum'>
+                  <Input
+                    type='number' min={1} max={6}
+                    placeholder='3'
+                    value={form.strata}
+                    onChange={(e) => set('strata', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+              </div>
+              <FormField label='Unit Specs' hint='e.g. Studio, 1–2 bathrooms'>
+                <Input
+                  placeholder='Studio, 1–2 bathrooms'
+                  value={form.unit_specs}
+                  onChange={(e) => set('unit_specs', e.target.value)}
+                  className='rounded-md'
+                />
+              </FormField>
+            </SectionCard>
+          )}
 
           {/* S4 — Categorization */}
           <SectionCard
@@ -2200,61 +2744,145 @@ export function ListingFormPage() {
                 onChange={(v) => set('category_tags', v)}
               />
             </FormField>
-            {attributesByType.key_feature.length > 0 && (
+            {hasFeature(isRealEstate ? 're_feature_tags' : 'services_amenities') && (
               <>
-                <Separator />
-                <FormField label='Key Features'>
-                  <MultiSelectAttr
-                    options={attributesByType.key_feature}
-                    values={form.key_features}
-                    onChange={(v) => set('key_features', v)}
-                  />
-                </FormField>
+                {attributesByType.key_feature.length > 0 && (
+                  <>
+                    <Separator />
+                    <FormField label='Feature Title' hint='Section heading for key features'>
+                      <Input
+                        placeholder='Feature Title'
+                        value={form.feature_title}
+                        onChange={(e) => set('feature_title', e.target.value)}
+                        className='rounded-md'
+                      />
+                    </FormField>
+                    <FormField label='Key Features'>
+                      <MultiSelectAttr
+                        options={attributesByType.key_feature}
+                        values={form.key_features}
+                        onChange={(v) => set('key_features', v)}
+                      />
+                    </FormField>
+                  </>
+                )}
+                {attributesByType.service.length > 0 && (
+                  <>
+                    <Separator />
+                    <FormField label='Service Title' hint='Section heading for services'>
+                      <Input
+                        placeholder='Service Title'
+                        value={form.service_title}
+                        onChange={(e) => set('service_title', e.target.value)}
+                        className='rounded-md'
+                      />
+                    </FormField>
+                    <FormField label='Services'>
+                      <MultiSelectAttr
+                        options={attributesByType.service}
+                        values={form.services}
+                        onChange={(v) => set('services', v)}
+                      />
+                    </FormField>
+                  </>
+                )}
+                {attributesByType.amenity.length > 0 && (
+                  <>
+                    <Separator />
+                    <FormField label='Amenities Title' hint='Section heading for amenities'>
+                      <Input
+                        placeholder='Amenities Title'
+                        value={form.amenities_title}
+                        onChange={(e) => set('amenities_title', e.target.value)}
+                        className='rounded-md'
+                      />
+                    </FormField>
+                    <FormField label='Amenities'>
+                      <MultiSelectAttr
+                        options={attributesByType.amenity}
+                        values={form.amenities}
+                        onChange={(v) => set('amenities', v)}
+                      />
+                    </FormField>
+                  </>
+                )}
+                {attributesByType.atmosphere.length > 0 && (
+                  <>
+                    <Separator />
+                    <FormField label='Atmosphere'>
+                      <MultiSelectAttr
+                        options={attributesByType.atmosphere}
+                        values={form.atmosphere}
+                        onChange={(v) => set('atmosphere', v)}
+                      />
+                    </FormField>
+                  </>
+                )}
               </>
             )}
-            {attributesByType.service.length > 0 && (
+
+            {/* Room Types — Hotels only */}
+            {isHotel && (
               <>
                 <Separator />
-                <FormField label='Services'>
-                  <MultiSelectAttr
-                    options={attributesByType.service}
-                    values={form.services}
-                    onChange={(v) => set('services', v)}
+                <FormField label='Title' hint='Section heading for room types'>
+                  <Input
+                    placeholder='e.g. Room Types'
+                    value={form.room_types_title}
+                    onChange={(e) => set('room_types_title', e.target.value)}
+                    className='rounded-md'
                   />
                 </FormField>
-              </>
-            )}
-            {attributesByType.amenity.length > 0 && (
-              <>
-                <Separator />
-                <FormField label='Amenities'>
-                  <MultiSelectAttr
-                    options={attributesByType.amenity}
-                    values={form.amenities}
-                    onChange={(v) => set('amenities', v)}
-                  />
-                </FormField>
-              </>
-            )}
-            {attributesByType.atmosphere.length > 0 && (
-              <>
-                <Separator />
-                <FormField label='Atmosphere'>
-                  <MultiSelectAttr
-                    options={attributesByType.atmosphere}
-                    values={form.atmosphere}
-                    onChange={(v) => set('atmosphere', v)}
-                  />
-                </FormField>
+                <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
+                  Types
+                </p>
+                <div className='space-y-2'>
+                  {form.room_types.map((rt, i) => (
+                    <div key={i} className='flex gap-2'>
+                      <Input
+                        placeholder='Room Type'
+                        value={rt.room_type}
+                        onChange={(e) => {
+                          const updated = form.room_types.map((r, idx) =>
+                            idx === i ? { ...r, room_type: e.target.value } : r
+                          )
+                          set('room_types', updated)
+                        }}
+                        className='flex-1 rounded-md'
+                      />
+                      <Input
+                        placeholder='Room Type Option'
+                        value={rt.option}
+                        onChange={(e) => {
+                          const updated = form.room_types.map((r, idx) =>
+                            idx === i ? { ...r, option: e.target.value } : r
+                          )
+                          set('room_types', updated)
+                        }}
+                        className='flex-1 rounded-md'
+                      />
+                      <Button
+                        type='button' variant='ghost' size='icon' className='h-9 w-9 shrink-0'
+                        onClick={() => set('room_types', form.room_types.filter((_, idx) => idx !== i))}
+                      >
+                        <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
+                      </Button>
+                    </div>
+                  ))}
+                  <AddButton onClick={() => set('room_types', [...form.room_types, { room_type: '', option: '' }])}>
+                    Add Room Type
+                  </AddButton>
+                </div>
               </>
             )}
           </SectionCard>
 
-          {/* S5 — Social Sharing (required) */}
+          {/* S5 — Social Handles (Premium+) */}
+          {hasFeature('social_handles') && (
           <SectionCard
             icon={<Share2 className='h-5 w-5' />}
-            title='Social Sharing'
-            description='At least one social link is required (Facebook, Instagram, or other)'
+            title='Social Media Handles'
+            description='Your business Facebook, Instagram and other social links'
           >
             {errors.social && (
               <div className='rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive'>
@@ -2340,24 +2968,37 @@ export function ListingFormPage() {
               </AddButton>
             </div>
           </SectionCard>
+          )}
 
-          {/* S6 — Reservation Links */}
-          <SectionCard
-            icon={<LinkIcon className='h-5 w-5' />}
-            title='Third-Party Reservation Links'
-            description='Up to 3 external booking platform links'
-          >
-            <ReservationLinksEditor
-              links={form.reservation_links}
-              onChange={(v) => set('reservation_links', v)}
-            />
-          </SectionCard>
+          {/* S6 — Reservation Links (Standard+) */}
+          {hasFeature('third_party_links') && (
+            <SectionCard
+              icon={<LinkIcon className='h-5 w-5' />}
+              title='Third-Party Reservation Links'
+              description='External booking platform links (Booking.com, Rappi, GetYourGuide, etc.)'
+            >
+              <FormField label='Check Availability Button Title' hint='Label for the booking CTA button, e.g. "Check Availability"'>
+                <Input
+                  placeholder='Check Availability'
+                  value={form.availability_button_title}
+                  onChange={(e) => set('availability_button_title', e.target.value)}
+                  className='rounded-md'
+                />
+              </FormField>
+              <Separator />
+              <ReservationLinksEditor
+                links={form.reservation_links}
+                onChange={(v) => set('reservation_links', v)}
+              />
+            </SectionCard>
+          )}
 
-          {/* S7 — Contact */}
+          {/* S7 — Contact (Premium+) */}
+          {hasFeature('company_contact') && (
           <SectionCard
             icon={<Phone className='h-5 w-5' />}
             title='Contact Information'
-            description='How visitors can reach this listing'
+            description='Company contact details shown on your listing page'
           >
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
               <FormField label='Email' error={errors.email}>
@@ -2399,8 +3040,10 @@ export function ListingFormPage() {
               </FormField>
             </div>
           </SectionCard>
+          )}
 
-          {/* S8 — Location */}
+          {/* S8 — Location (Standard+) */}
+          {hasFeature('address_map') && (
           <SectionCard
             icon={<MapPin className='h-5 w-5' />}
             title='Location Details'
@@ -2413,6 +3056,15 @@ export function ListingFormPage() {
                     placeholder='e.g. Calle del Cuartel #36-60, Getsemaní'
                     value={form.address}
                     onChange={(e) => set('address', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Address URL' hint='Direct link to the address (e.g. Google Maps short link)'>
+                  <Input
+                    type='url'
+                    placeholder='https://maps.app.goo.gl/…'
+                    value={form.address_url}
+                    onChange={(e) => set('address_url', e.target.value)}
                     className='rounded-md'
                   />
                 </FormField>
@@ -2471,6 +3123,7 @@ export function ListingFormPage() {
               </div>
             </div>
           </SectionCard>
+          )}
 
           {/* S9 — Pricing & Availability */}
           {!isRealEstate && (
@@ -2531,6 +3184,25 @@ export function ListingFormPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </FormField>
+              </div>
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='Price Tier' hint='Relative price level for display'>
+                  <div className='flex gap-3'>
+                    {(['$', '$$', '$$$', '$$$$'] as PriceTier[]).map((tier) => (
+                      <label key={tier} className='flex items-center gap-1.5 cursor-pointer'>
+                        <input
+                          type='radio'
+                          name='price_tier'
+                          value={tier}
+                          checked={form.price_tier === tier}
+                          onChange={() => set('price_tier', tier)}
+                          className='accent-amber-600'
+                        />
+                        <span className='text-sm font-medium'>{tier}</span>
+                      </label>
+                    ))}
+                  </div>
                 </FormField>
               </div>
               {isActivities && (
@@ -2601,18 +3273,118 @@ export function ListingFormPage() {
                   </div>
                 </>
               )}
-              {isGastronomy && (
+              {(isGastronomy || isHotel) && (
                 <>
                   <Separator />
                   <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
                     Opening Hours
                   </p>
+                  {hasFeature('hours_status') && (
+                    <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                      <FormField label='Hours Status' hint='Quick display text, e.g. "Opens Today at 11:30 am"'>
+                        <Input
+                          placeholder='Opens Today at 11:30 am'
+                          value={form.hours_status}
+                          onChange={(e) => set('hours_status', e.target.value)}
+                          className='rounded-md'
+                        />
+                      </FormField>
+                      <FormField label='Hours Note' hint='e.g. "Monday to Friday from 11:30 am to 9 pm"'>
+                        <Input
+                          placeholder='Monday to Friday from 11:30 am to 9 pm'
+                          value={form.hours_note}
+                          onChange={(e) => set('hours_note', e.target.value)}
+                          className='rounded-md'
+                        />
+                      </FormField>
+                    </div>
+                  )}
                   <WeeklyHoursEditor
                     hours={form.weekly_hours}
                     onChange={(v) => set('weekly_hours', v)}
                   />
                 </>
               )}
+              {/* Boating Info — Boating subcategory + Standard+ */}
+              {isBoating && hasFeature('boating_info') && (
+                <>
+                  <Separator />
+                  <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
+                    Boating Info
+                  </p>
+                  <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
+                    <FormField label='Capacity / Type' hint='e.g. 45–90 min from marina'>
+                      <Input
+                        placeholder='8 people, 45–90 min from Cartagena marina'
+                        value={form.boating_info.capacity_type}
+                        onChange={(e) => set('boating_info', { ...form.boating_info, capacity_type: e.target.value })}
+                        className='rounded-md'
+                      />
+                    </FormField>
+                    <FormField label='Season' hint='Best time to visit'>
+                      <Input
+                        placeholder='December to April (dry season)'
+                        value={form.boating_info.season}
+                        onChange={(e) => set('boating_info', { ...form.boating_info, season: e.target.value })}
+                        className='rounded-md'
+                      />
+                    </FormField>
+                    <FormField label='What to Bring'>
+                      <Input
+                        placeholder='Light clothing, reef-safe sunscreen, camera'
+                        value={form.boating_info.what_to_bring}
+                        onChange={(e) => set('boating_info', { ...form.boating_info, what_to_bring: e.target.value })}
+                        className='rounded-md'
+                      />
+                    </FormField>
+                  </div>
+                </>
+              )}
+
+              {/* Boat Details — Boating subcategory */}
+              {isBoating && (
+                <>
+                  <Separator />
+                  <FormField label='Details Title' hint='Section heading for boat details'>
+                    <Input
+                      placeholder='Details Title'
+                      value={form.details_title}
+                      onChange={(e) => set('details_title', e.target.value)}
+                      className='rounded-md'
+                    />
+                  </FormField>
+                  <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
+                    Details
+                  </p>
+                  <div className='space-y-2'>
+                    {form.boat_details.map((item, i) => (
+                      <div key={i} className='flex gap-2'>
+                        <Input
+                          placeholder='Content'
+                          value={item.content}
+                          onChange={(e) => {
+                            const updated = form.boat_details.map((d, idx) =>
+                              idx === i ? { ...d, content: e.target.value } : d
+                            )
+                            set('boat_details', updated)
+                          }}
+                          className='flex-1 rounded-md'
+                        />
+                        <Button
+                          type='button' variant='ghost' size='icon' className='h-9 w-9 shrink-0'
+                          onClick={() => set('boat_details', form.boat_details.filter((_, idx) => idx !== i))}
+                        >
+                          <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
+                        </Button>
+                      </div>
+                    ))}
+                    <AddButton onClick={() => set('boat_details', [...form.boat_details, { content: '' }])}>
+                      Add Row
+                    </AddButton>
+                  </div>
+                </>
+              )}
+
               <Separator />
               <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
                 Road Map / Itinerary
@@ -2621,49 +3393,554 @@ export function ListingFormPage() {
                 roadMap={form.road_map}
                 onChange={(v) => set('road_map', v)}
               />
+
+              <Separator />
+              <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
+                What&apos;s Included
+              </p>
+              <SimpleListEditor
+                section={form.whats_included}
+                onChange={(v) => set('whats_included', v)}
+                titlePlaceholder="What's included in this experience"
+                itemPlaceholder='e.g. Transportation, Meals, Equipment'
+              />
+
+              <Separator />
+              <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
+                Important Info
+              </p>
+              <SimpleListEditor
+                section={form.important_info}
+                onChange={(v) => set('important_info', v)}
+                titlePlaceholder='Important information for visitors'
+                itemPlaceholder='e.g. Bring sunscreen, Minimum age 12'
+              />
             </SectionCard>
           )}
 
-          {/* S10 — Travel Tips */}
+          {/* S10 — Travel Tips (Standard+ for Activities/Beaches) */}
+          {hasFeature('travel_tips') && (isActivities || isBeach) && (
+            <SectionCard
+              icon={<Lightbulb className='h-5 w-5' />}
+              title='Travel Tips & Booking Info'
+              description='Helpful tips and information for visitors'
+            >
+              <TravelTipsEditor
+                tips={form.travel_tips}
+                onChange={(v) => set('travel_tips', v)}
+              />
+            </SectionCard>
+          )}
+
+          {/* Developer Info (Standard+ for Real Estate) */}
+          {isRealEstate && hasFeature('re_developer_info') && (
+            <SectionCard
+              icon={<Globe className='h-5 w-5' />}
+              title='Developer Information'
+              description='Real estate developer or agency behind this project'
+            >
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
+                <FormField label='Developer / Agency Name'>
+                  <Input
+                    placeholder='Market Rental Habitats'
+                    value={form.developer_info.name}
+                    onChange={(e) => set('developer_info', { ...form.developer_info, name: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Contact'>
+                  <Input
+                    placeholder='+57 300 000 0000'
+                    value={form.developer_info.contact}
+                    onChange={(e) => set('developer_info', { ...form.developer_info, contact: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Website'>
+                  <Input
+                    type='url'
+                    placeholder='https://developer.com'
+                    value={form.developer_info.website}
+                    onChange={(e) => set('developer_info', { ...form.developer_info, website: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+              </div>
+              <Separator />
+              <FormField label='Developer Logo URL' hint='Image URL for the developer or agency logo'>
+                <Input
+                  type='url'
+                  placeholder='https://…/logo.png'
+                  value={form.developer_info.logo}
+                  onChange={(e) => set('developer_info', { ...form.developer_info, logo: e.target.value })}
+                  className='rounded-md'
+                />
+              </FormField>
+              <FormField label='Developer Description'>
+                <Textarea
+                  placeholder='Brief description of the developer or agency…'
+                  value={form.developer_info.description}
+                  onChange={(e) => set('developer_info', { ...form.developer_info, description: e.target.value })}
+                  className='rounded-md'
+                  rows={3}
+                />
+              </FormField>
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='Button Label' hint='e.g. View Properties, Contact Us'>
+                  <Input
+                    placeholder='View Properties'
+                    value={form.developer_info.button_label}
+                    onChange={(e) => set('developer_info', { ...form.developer_info, button_label: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Button URL'>
+                  <Input
+                    type='url'
+                    placeholder='https://…'
+                    value={form.developer_info.website}
+                    onChange={(e) => set('developer_info', { ...form.developer_info, website: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Appointments CTA (Standard+ for Real Estate) */}
+          {isRealEstate && hasFeature('re_appointment') && (
+            <SectionCard
+              icon={<Clock className='h-5 w-5' />}
+              title='Appointments'
+              description='Appointment booking call-to-action shown on the listing page'
+            >
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='Appointment Title'>
+                  <Input
+                    placeholder='Schedule a Viewing'
+                    value={form.appointment_info.title}
+                    onChange={(e) => set('appointment_info', { ...form.appointment_info, title: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Appointment Link' hint='Booking or calendar URL'>
+                  <Input
+                    type='url'
+                    placeholder='https://calendly.com/…'
+                    value={form.appointment_info.link}
+                    onChange={(e) => set('appointment_info', { ...form.appointment_info, link: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+              </div>
+              <FormField label='Appointment Description'>
+                <Textarea
+                  placeholder='Book a visit to see this property in person…'
+                  value={form.appointment_info.content}
+                  onChange={(e) => set('appointment_info', { ...form.appointment_info, content: e.target.value })}
+                  className='rounded-md'
+                  rows={3}
+                />
+              </FormField>
+            </SectionCard>
+          )}
+
+          {/* Website CTA (Standard+ for Real Estate) */}
+          {isRealEstate && hasFeature('re_website_cta') && (
+            <SectionCard
+              icon={<Globe className='h-5 w-5' />}
+              title='Website / Portal'
+              description='External website or portal link shown on the listing page'
+            >
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='Website Title'>
+                  <Input
+                    placeholder='View on Our Website'
+                    value={form.website_cta.title}
+                    onChange={(e) => set('website_cta', { ...form.website_cta, title: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Website Link'>
+                  <Input
+                    type='url'
+                    placeholder='https://agency.com/listing/…'
+                    value={form.website_cta.link}
+                    onChange={(e) => set('website_cta', { ...form.website_cta, link: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+              </div>
+              <FormField label='Website Description'>
+                <Textarea
+                  placeholder='Find more details, photos and contact options on our website…'
+                  value={form.website_cta.content}
+                  onChange={(e) => set('website_cta', { ...form.website_cta, content: e.target.value })}
+                  className='rounded-md'
+                  rows={3}
+                />
+              </FormField>
+            </SectionCard>
+          )}
+
+          {/* Blueprint + Video Uploads (Premium+ for Real Estate) */}
+          {isRealEstate && hasFeature('re_blueprint') && (
+            <SectionCard
+              icon={<Upload className='h-5 w-5' />}
+              title='Blueprint & Videos'
+              description='Upload floor plans and video tours for this property'
+            >
+              <FormField label='Blueprint URL' hint='Link to PDF floor plan or blueprint image'>
+                <Input
+                  type='url'
+                  placeholder='https://…/blueprint.pdf'
+                  value={form.blueprint_url}
+                  onChange={(e) => set('blueprint_url', e.target.value)}
+                  className='rounded-md'
+                />
+              </FormField>
+              <Separator />
+              <div className='space-y-2'>
+                <Label className='text-sm font-medium'>Video Tours</Label>
+                {form.video_urls.map((v, i) => (
+                  <div key={i} className='flex gap-2'>
+                    <Input
+                      placeholder='Label'
+                      value={v.label}
+                      onChange={(e) => {
+                        const updated = form.video_urls.map((item, idx) =>
+                          idx === i ? { ...item, label: e.target.value } : item
+                        )
+                        set('video_urls', updated)
+                      }}
+                      className='w-36 shrink-0 rounded-md'
+                    />
+                    <Input
+                      type='url'
+                      placeholder='https://youtube.com/…'
+                      value={v.url}
+                      onChange={(e) => {
+                        const updated = form.video_urls.map((item, idx) =>
+                          idx === i ? { ...item, url: e.target.value } : item
+                        )
+                        set('video_urls', updated)
+                      }}
+                      className='flex-1 rounded-md'
+                    />
+                    <Button
+                      type='button' variant='ghost' size='icon' className='h-9 w-9 shrink-0'
+                      onClick={() => set('video_urls', form.video_urls.filter((_, idx) => idx !== i))}
+                    >
+                      <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
+                    </Button>
+                  </div>
+                ))}
+                <AddButton onClick={() => set('video_urls', [...form.video_urls, { url: '', label: '' }])}>
+                  Add Video
+                </AddButton>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* S11 — FAQs (Premium+) */}
+          {hasFeature('faqs') && (
+            <SectionCard
+              icon={<HelpCircle className='h-5 w-5' />}
+              title='FAQs'
+              description='Frequently asked questions about this listing'
+            >
+              <FAQsEditor faqs={form.faqs} onChange={(v) => set('faqs', v)} />
+            </SectionCard>
+          )}
+
+          {/* S12 — Deals (Premium+) */}
+          {hasFeature(isRealEstate ? 're_promotions' : 'deals_page') && (
+            <SectionCard
+              icon={<Percent className='h-5 w-5' />}
+              title='Deals & Promotions'
+              description='Special offers and discount deals'
+            >
+              <DealsEditor deals={form.deals} onChange={(v) => set('deals', v)} />
+            </SectionCard>
+          )}
+
+          {/* Select Feature Post */}
           <SectionCard
-            icon={<Lightbulb className='h-5 w-5' />}
-            title='Travel Tips & Booking Info'
-            description='Helpful tips and information for visitors'
+            icon={<Star className='h-5 w-5' />}
+            title='Select Feature Post'
+            description='Feature this listing with a logo and display type'
           >
-            <TravelTipsEditor
-              tips={form.travel_tips}
-              onChange={(v) => set('travel_tips', v)}
-            />
+            <div className='space-y-4'>
+              <label className='flex items-center gap-2 cursor-pointer'>
+                <input
+                  type='checkbox'
+                  checked={form.is_feature}
+                  onChange={(e) => set('is_feature', e.target.checked)}
+                  className='accent-amber-600 h-4 w-4'
+                />
+                <span className='text-sm font-medium'>Is Feature</span>
+              </label>
+              <FormField label='Logo' hint='Upload a logo/icon image for the featured card'>
+                <Input
+                  type='url'
+                  placeholder='https://…/logo.png'
+                  value={form.feature_logo}
+                  onChange={(e) => set('feature_logo', e.target.value)}
+                  className='rounded-md'
+                />
+                {form.feature_logo && (
+                  <img
+                    src={form.feature_logo}
+                    alt='Feature Logo'
+                    className='mt-2 h-16 w-16 rounded-md border object-contain'
+                  />
+                )}
+              </FormField>
+              <FormField label='Select Types' hint='Display mode for this featured post'>
+                <div className='flex gap-4'>
+                  {(['reserve', 'menu'] as FeaturePostType[]).map((t) => (
+                    <label key={t} className='flex items-center gap-1.5 cursor-pointer'>
+                      <input
+                        type='radio'
+                        name='feature_post_type'
+                        value={t}
+                        checked={form.feature_post_type === t}
+                        onChange={() => set('feature_post_type', t)}
+                        className='accent-amber-600'
+                      />
+                      <span className='text-sm font-medium capitalize'>{t}</span>
+                    </label>
+                  ))}
+                </div>
+              </FormField>
+            </div>
           </SectionCard>
 
-          {/* S11 — FAQs */}
-          <SectionCard
-            icon={<HelpCircle className='h-5 w-5' />}
-            title='FAQs'
-            description='Frequently asked questions about this listing'
-          >
-            <FAQsEditor faqs={form.faqs} onChange={(v) => set('faqs', v)} />
-          </SectionCard>
-
-          {/* S12 — Deals */}
-          <SectionCard
-            icon={<Percent className='h-5 w-5' />}
-            title='Deals & Promotions'
-            description='Special offers and discount deals'
-          >
-            <DealsEditor deals={form.deals} onChange={(v) => set('deals', v)} />
-          </SectionCard>
-
-          {/* S13 — Menu (Gastronomy only) */}
-          {isGastronomy && (
+          {/* S13 — Menu (Gastronomy, Standard+) */}
+          {isGastronomy && hasFeature('menu') && (
             <SectionCard
               icon={<UtensilsCrossed className='h-5 w-5' />}
               title='Menu'
-              description='Menu items for this gastronomy listing'
+              description='Menu items, PDF file and QR code'
             >
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='Menu Button Title' hint='Label shown on the menu CTA button'>
+                  <Input
+                    placeholder='Menu'
+                    value={form.menu_button_title}
+                    onChange={(e) => set('menu_button_title', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Menu QR Code URL' hint='URL embedded in the QR code'>
+                  <Input
+                    type='url'
+                    placeholder='https://…/menu'
+                    value={form.menu_qr_code}
+                    onChange={(e) => set('menu_qr_code', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+              </div>
+              {hasFeature('menu_file') && (
+                <FormField label='Menu File URL' hint='Direct link to PDF menu file'>
+                  <Input
+                    type='url'
+                    placeholder='https://…/menu.pdf'
+                    value={form.menu_file_url}
+                    onChange={(e) => set('menu_file_url', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+              )}
+              <Separator />
               <MenuEditor
                 items={form.menu_items}
                 onChange={(v) => set('menu_items', v)}
+              />
+            </SectionCard>
+          )}
+
+          {/* Also Available On (Premium+ for Activities + Gastronomy) */}
+          {(isActivities || isGastronomy) && hasFeature('also_available_on') && (
+            <SectionCard
+              icon={<ExternalLink className='h-5 w-5' />}
+              title='Also Available On'
+              description={isGastronomy ? 'Delivery & ordering platforms (Rappi, Takeout, Gift Card, etc.)' : 'Booking platforms (GetYourGuide, Viator, Book Direct, etc.)'}
+            >
+              <div className='space-y-2'>
+                {form.also_available_on.map((item, i) => (
+                  <div key={i} className='flex gap-2'>
+                    <Input
+                      placeholder='Platform name'
+                      value={item.name}
+                      onChange={(e) => {
+                        const updated = form.also_available_on.map((a, idx) =>
+                          idx === i ? { ...a, name: e.target.value } : a
+                        )
+                        set('also_available_on', updated)
+                      }}
+                      className='w-40 shrink-0 rounded-md'
+                    />
+                    <Input
+                      type='url'
+                      placeholder='https://…'
+                      value={item.url}
+                      onChange={(e) => {
+                        const updated = form.also_available_on.map((a, idx) =>
+                          idx === i ? { ...a, url: e.target.value } : a
+                        )
+                        set('also_available_on', updated)
+                      }}
+                      className='flex-1 rounded-md'
+                    />
+                    <Button
+                      type='button' variant='ghost' size='icon' className='h-9 w-9 shrink-0'
+                      onClick={() => set('also_available_on', form.also_available_on.filter((_, idx) => idx !== i))}
+                    >
+                      <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
+                    </Button>
+                  </div>
+                ))}
+                <AddButton onClick={() => set('also_available_on', [...form.also_available_on, { name: '', url: '' }])}>
+                  Add Platform
+                </AddButton>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Featured In — press & media (Premium+ for Gastronomy) */}
+          {isGastronomy && hasFeature('featured_in') && (
+            <SectionCard
+              icon={<Globe className='h-5 w-5' />}
+              title='Featured In'
+              description='Press coverage, YouTube features, and media mentions'
+            >
+              <div className='space-y-2'>
+                {form.featured_in.map((item, i) => (
+                  <div key={i} className='flex gap-2'>
+                    <Input
+                      placeholder='Publication / channel name'
+                      value={item.name}
+                      onChange={(e) => {
+                        const updated = form.featured_in.map((a, idx) =>
+                          idx === i ? { ...a, name: e.target.value } : a
+                        )
+                        set('featured_in', updated)
+                      }}
+                      className='w-48 shrink-0 rounded-md'
+                    />
+                    <Input
+                      type='url'
+                      placeholder='https://…'
+                      value={item.url}
+                      onChange={(e) => {
+                        const updated = form.featured_in.map((a, idx) =>
+                          idx === i ? { ...a, url: e.target.value } : a
+                        )
+                        set('featured_in', updated)
+                      }}
+                      className='flex-1 rounded-md'
+                    />
+                    <Button
+                      type='button' variant='ghost' size='icon' className='h-9 w-9 shrink-0'
+                      onClick={() => set('featured_in', form.featured_in.filter((_, idx) => idx !== i))}
+                    >
+                      <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
+                    </Button>
+                  </div>
+                ))}
+                <AddButton onClick={() => set('featured_in', [...form.featured_in, { name: '', url: '' }])}>
+                  Add Media Feature
+                </AddButton>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Book With Us (Premium+ for Gastronomy + Hotels + Beaches + Boating) */}
+          {(isGastronomy || isHotel || isBeach || isBoating) && hasFeature('book_with_us') && (
+            <SectionCard
+              icon={<CheckSquare className='h-5 w-5' />}
+              title='Book With Us'
+              description='Direct booking CTA block shown on the listing page'
+            >
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='Section Title' hint='e.g. "BOOK WITH US"'>
+                  <Input
+                    placeholder='BOOK WITH US'
+                    value={form.book_with_us.title}
+                    onChange={(e) => set('book_with_us', { ...form.book_with_us, title: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Button Link URL' hint='Where the Book button points to'>
+                  <Input
+                    type='url'
+                    placeholder='https://…/reservations'
+                    value={form.book_with_us.button_link}
+                    onChange={(e) => set('book_with_us', { ...form.book_with_us, button_link: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='"Why Book" Title' hint='e.g. "Why Book With La Carta?"'>
+                  <Input
+                    placeholder='Why Book With La Carta?'
+                    value={form.book_with_us.why_title}
+                    onChange={(e) => set('book_with_us', { ...form.book_with_us, why_title: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='"Why Book" Link URL' hint='Link for the why-book section'>
+                  <Input
+                    type='url'
+                    placeholder='https://…/terms'
+                    value={form.book_with_us.why_link}
+                    onChange={(e) => set('book_with_us', { ...form.book_with_us, why_link: e.target.value })}
+                    className='rounded-md'
+                  />
+                </FormField>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* RNT & Inventory — shared optional fields */}
+          {(isGastronomy || isHotel || isBeach || isBoating) && (
+            <SectionCard
+              icon={<FileText className='h-5 w-5' />}
+              title='Registration & Inventory'
+              description='Tourism registration number and capacity info'
+            >
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='RNT No.' hint='Registro Nacional de Turismo number'>
+                  <Input
+                    placeholder='RNT-123456'
+                    value={form.rnt_no}
+                    onChange={(e) => set('rnt_no', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+                <FormField label='Inventory / Capacity' hint='e.g. "120 seats", "3 floors"'>
+                  <Input
+                    placeholder='120 seats'
+                    value={form.inventory}
+                    onChange={(e) => set('inventory', e.target.value)}
+                    className='rounded-md'
+                  />
+                </FormField>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Direct Reservation Links (Premium+ for Hotels/Beaches/Boating) */}
+          {(isHotel || isBeach || isBoating) && hasFeature('direct_links') && (
+            <SectionCard
+              icon={<LinkIcon className='h-5 w-5' />}
+              title='Direct Reservation Links'
+              description="Your own booking links (direct reservations, not third-party platforms)"
+            >
+              <ReservationLinksEditor
+                links={form.direct_links}
+                onChange={(v) => set('direct_links', v)}
               />
             </SectionCard>
           )}

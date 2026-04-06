@@ -16,6 +16,7 @@ import {
   CloudSun,
   UtensilsCrossed,
   Tag,
+  Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase/supabase'
@@ -493,6 +494,10 @@ export function CategoryPage() {
             <TabsTrigger value='menu' className='gap-1.5'>
               <UtensilsCrossed className='h-3.5 w-3.5' />
               Menu
+            </TabsTrigger>
+            <TabsTrigger value='time' className='gap-1.5'>
+              <Clock className='h-3.5 w-3.5' />
+              Time
             </TabsTrigger>
           </TabsList>
 
@@ -1000,6 +1005,13 @@ export function CategoryPage() {
             <AttributeTab
               attrType='menu'
               label='Menu'
+              categories={categories}
+            />
+          </TabsContent>
+          <TabsContent value='time'>
+            <AttributeTab
+              attrType='time'
+              label='Time Slots'
               categories={categories}
             />
           </TabsContent>

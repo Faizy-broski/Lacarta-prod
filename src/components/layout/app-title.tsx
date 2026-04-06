@@ -95,7 +95,7 @@ export function AppTitle() {
               onClick={() => setOpenMobile(false)}
               className='text-start text-sm'
             >
-              <span className='truncate'><img src={LogoImg} alt={'LogoImg'} /></span>
+              <span className='truncate'><img src={typeof LogoImg === 'string' ? LogoImg : LogoImg.src} alt={'LogoImg'} /></span>
             </Link>
             {/* <ToggleSidebar /> */}
           </div>

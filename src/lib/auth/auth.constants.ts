@@ -3,12 +3,12 @@ import { UserRole } from "./auth.types"
 export const AUTH_COOKIE = "app_auth"
 
 export const ROLE_REDIRECT: Record<UserRole, string> = {
-  owner: '/',
-  admin: '/analytics/admin-analytics',
-  assistant: '/content',
-  editor: '/content',
-  client: '/my-listings',
-  subscriber: '/favorites',
+  owner: '/dashboard',
+  admin: '/dashboard',
+  assistant: '/dashboard/content',
+  editor: '/dashboard/content',
+  client: '/dashboard/my-listings',
+  subscriber: '/profile',
 }
 
 export function getAuthErrorMessage(code: string): string {

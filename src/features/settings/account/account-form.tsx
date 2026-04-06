@@ -1,9 +1,14 @@
+'use client'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/lib/auth/auth.store'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -48,25 +53,57 @@ const accountFormSchema = z.object({
     .min(1, 'Please enter your name.')
     .min(2, 'Name must be at least 2 characters.')
     .max(30, 'Name must not be longer than 30 characters.'),
-  dob: z.date('Please select your date of birth.'),
-  language: z.string('Please select a language.'),
+  dob: z.date().optional(),
+  language: z.string().optional(),
 })
 
 type AccountFormValues = z.infer<typeof accountFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<AccountFormValues> = {
-  name: '',
-}
-
 export function AccountForm() {
+  const user = useAuthStore((s) => s.user)
+  const [saving, setSaving] = useState(false)
+
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues,
+    defaultValues: { name: '', language: 'en' },
   })
 
-  function onSubmit(data: AccountFormValues) {
-    showSubmittedData(data)
+  // Pre-fill from Supabase
+  useEffect(() => {
+    if (!user?.accountNo) return
+    supabase
+      .from('users')
+      .select('full_name, language, date_of_birth')
+      .eq('id', user.accountNo)
+      .single()
+      .then(({ data }) => {
+        if (!data) return
+        form.reset({
+          name: data.full_name ?? '',
+          language: data.language ?? 'en',
+          dob: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
+        })
+      })
+  }, [user?.accountNo, form])
+
+  async function onSubmit(data: AccountFormValues) {
+    if (!user?.accountNo) return
+    setSaving(true)
+    const { error } = await supabase
+      .from('users')
+      .update({
+        full_name: data.name,
+        language: data.language ?? null,
+        date_of_birth: data.dob ? data.dob.toISOString().split('T')[0] : null,
+      })
+      .eq('id', user.accountNo)
+
+    setSaving(false)
+    if (error) {
+      toast.error('Failed to save account settings.')
+    } else {
+      toast.success('Account settings saved.')
+    }
   }
 
   return (
@@ -82,8 +119,7 @@ export function AccountForm() {
                 <Input placeholder='Your name' {...field} />
               </FormControl>
               <FormDescription>
-                This is the name that will be displayed on your profile and in
-                emails.
+                This is the name that will be displayed on your profile and in emails.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -121,9 +157,7 @@ export function AccountForm() {
                       )}
                     >
                       {field.value
-                        ? languages.find(
-                            (language) => language.value === field.value
-                          )?.label
+                        ? languages.find((l) => l.value === field.value)?.label
                         : 'Select language'}
                       <CaretSortIcon className='ms-2 h-4 w-4 shrink-0 opacity-50' />
                     </Button>
@@ -139,16 +173,12 @@ export function AccountForm() {
                           <CommandItem
                             value={language.label}
                             key={language.value}
-                            onSelect={() => {
-                              form.setValue('language', language.value)
-                            }}
+                            onSelect={() => form.setValue('language', language.value)}
                           >
                             <CheckIcon
                               className={cn(
                                 'size-4',
-                                language.value === field.value
-                                  ? 'opacity-100'
-                                  : 'opacity-0'
+                                language.value === field.value ? 'opacity-100' : 'opacity-0'
                               )}
                             />
                             {language.label}
@@ -166,7 +196,10 @@ export function AccountForm() {
             </FormItem>
           )}
         />
-        <Button type='submit'>Update account</Button>
+        <Button type='submit' disabled={saving}>
+          {saving && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+          Update account
+        </Button>
       </form>
     </Form>
   )
