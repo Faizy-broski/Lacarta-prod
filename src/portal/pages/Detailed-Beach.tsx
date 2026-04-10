@@ -1,4 +1,6 @@
-import React, { useState, useRef } from "react";
+'use client'
+
+import React, { useState, useRef, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -53,6 +55,12 @@ import {
 } from "lucide-react";
 import { Button } from "@public/components/ui/button";
 import { Badge } from "@public/components/ui/badge";
+import { useListing, useNearbyListings } from "@/lib/listings.hooks";
+import { getNeighborhoodOptions } from "@public/data/filter-config";
+import { getListingImages, getListingMapSrc, normalizeStringArray } from "@/portal/lib/listing-detail-utils";
+import ReviewSection from "@public/components/listings/ReviewSection";
+import FavoriteButton from "@public/components/listings/FavoriteButton";
+import { usePortalStore } from "@public/store/portalStore";
 
 const thumbnails = [
   "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800",
@@ -61,111 +69,6 @@ const thumbnails = [
   "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800",
 ];
 
-const sliderPlaces = [
-  {
-    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800",
-    category: "Foodie",
-    title: "LA GRANDE – MONT ROYAL",
-    subtitle: "Best French Breakfast",
-    rating: 4.5,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800",
-    category: "Grill",
-    title: "THE BULL HOUSE",
-    subtitle: "Premium Steak & BBQ",
-    rating: 4.2,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
-    category: "Asian Fusion",
-    title: "KARAMI FUSION",
-    subtitle: "Modern Pan-Asian Cuisine",
-    rating: 4.7,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800",
-    category: "Italian",
-    title: "BELLA NAPOLI",
-    subtitle: "Authentic Wood-Fired Pizza",
-    rating: 4.8,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1529042410759-befb1204b468?w=800",
-    category: "Cafe",
-    title: "URBAN BREW",
-    subtitle: "Specialty Coffee & Brunch",
-    rating: 4.3,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800",
-    category: "Fine Dining",
-    title: "L'ÉTOILE",
-    subtitle: "Contemporary French Cuisine",
-    rating: 4.9,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=800",
-    category: "Desserts",
-    title: "SWEET HAVEN",
-    subtitle: "Artisan Cakes & Pastries",
-    rating: 4.1,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=800",
-    category: "Fast Food",
-    title: "STACK BURGERS",
-    subtitle: "Gourmet Smash Burgers",
-    rating: 4.4,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1499028344343-cd173ffc68a9?w=800",
-    category: "Seafood",
-    title: "BLUE OCEAN",
-    subtitle: "Fresh Catch Daily",
-    rating: 4.6,
-  },
-];
-
-const dealsSlides = [
-  {
-    title: "Snorkeling + Lunch Combo",
-    desc: "Full equipment, guided tour & fresh seafood lunch included. Valid till March 2025.",
-    highlight: "BOOK NOW",
-    tag: "SAVE 20%",
-
-    valid: "Valid until February 14, 2026",
-  },
-  {
-    title: "Group Discount 10% Off",
-    desc: "Book for 4+ people and get 10% off. Life jackets & transport included.",
-    highlight: "LIMITED",
-
-    valid: "Valid until February 14, 2026",
-  },
-  {
-    title: "Sunset Snorkel Package",
-    desc: "Evening snorkeling with cocktails on return. Reserve now.",
-    highlight: "POPULAR",
-    tag: "SAVE 20%",
-
-    valid: "Valid until February 14, 2026",
-  },
-  {
-    title: "Extended Stay Package",
-    desc: "Book 5 nights, get the 6th night complimentary. Includes daily breakfast and one spa treatment.",
-    tag: "SAVE 20%",
-    highlight: "LIMITED",
-    valid: "Valid until March 31, 2026",
-  },
-  {
-    title: "Romantic Escape",
-    desc: "Private beachfront dinner and champagne upon arrival.",
-    tag: "",
-    highlight: "LIMITED",
-    valid: "Valid until February 14, 2026",
-  },
-];
 
 const categories = [
   { label: "Activities", rating: 4.6 },
@@ -178,62 +81,6 @@ const categories = [
 
 const MAX_RATING = 5;
 
-const reviews = [
-  {
-    name: "El Gordo",
-    date: "Santo - 1 year",
-    rating: 2,
-    location: "Saint-Lambert",
-    text: "Another wonderful evening at my favourite local scene. It is unpleasantly cold out, however the vibrancy and warmth inside more than makes up for it. The quesadilla as always amazing and the sauce delicate only 💯! Thank you all for such an amazing experience every time and thank you for gifting me a glass of wine. So wonderful and sun-kissed 🤍",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60",
-    btnLabel: "El Gordo",
-  },
-  {
-    name: "El Gordo",
-    date: "Santo - 1 year",
-    rating: 0,
-    location: "Saint-Lambert",
-    text: "Another wonderful evening at my favourite local scene. It is unpleasantly cold out, however the vibrancy and warmth inside more than makes up for it. Truly a place that defines the spirit of Cartagena. Thank you all for such an amazing experience every time and thank you for gifting me a glass of wine. So wonderful and sun-kissed 🤍",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60",
-    btnLabel: "El Gordo",
-  },
-  {
-    name: "El Gordo",
-    date: "Santo - 1 year",
-    rating: 4,
-    location: "Saint-Lambert",
-    text: "Another wonderful evening at my favourite local scene. It is unpleasantly cold out, however the vibrancy and warmth inside more than makes up for it. Truly a place that defines the spirit of Cartagena. The quesadilla as always amazing and the sauce delicate only 💯! So wonderful and sun-kissed 🤍",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60",
-    btnLabel: "El Gordo",
-  },
-];
-
-const faqData = [
-  {
-    question: "How do I get there?",
-    answer:
-      "You can reach the location via private transport, taxi services, or arranged transfers. Detailed directions will be shared after booking.",
-  },
-  {
-    question: "Is it family-friendly?",
-    answer:
-      "Yes, the activity is suitable for families including children aged 6+. Life vests and beginner equipment are always available.",
-  },
-  {
-    question: "Is Wi-Fi available?",
-    answer: "Wi-Fi is available at the base camp and on the transfer boat.",
-  },
-  {
-    question: "What is the cancellation policy?",
-    answer:
-      "Cancellations made within the allowed period are eligible for a full refund. Please refer to the booking terms for exact details.",
-  },
-  {
-    question: "How far is the location?",
-    answer:
-      "The snorkeling site is approximately 45–60 minutes by boat from Cartagena marina. Transfer is included in most packages.",
-  },
-];
 
 const tagRoutes = {
   Beaches: "/Beaches",
@@ -328,9 +175,7 @@ function HorizontalSlider({ items }) {
             style={{ scrollSnapAlign: "start" }}
           >
             <Card className="h-full relative rounded-2xl shadow-md overflow-hidden bg-white">
-              <span className="absolute rounded-full shadow-lg p-2 top-3 right-3 bg-yellow-400">
-                <Heart className="text-black" />
-              </span>
+              <FavoriteButton listingId={item.id ?? ''} className="absolute top-3 right-3" />
               <div className="absolute top-4 left-4 border-white border-4  bg-white/30 backdrop-md">
                 <img
                   src={item.image}
@@ -558,9 +403,7 @@ function Horizontal2Slider({ items }) {
             style={{ scrollSnapAlign: "start" }}
           >
             <Card className="h-full relative rounded-2xl shadow-md overflow-hidden bg-white">
-              <span className="absolute rounded-full shadow-lg p-2 top-3 right-3 bg-white/30 backdrop-md">
-                <Heart className="fill-white" />
-              </span>
+              <FavoriteButton listingId={item.id ?? ''} className="absolute top-3 right-3" />
               <div className="absolute top-4 left-4 border-white border-4  bg-white/30 backdrop-md">
                 <img
                   src={item.image}
@@ -655,9 +498,148 @@ function Horizontal2Slider({ items }) {
   );
 }
 
-export default function BeachDetails() {
+
+export default function BeachDetails({ slug }: { slug?: string }) {
+  const { listing, loading, error } = useListing(slug || "");
+  const { setCurrentListing, clearCurrentListing } = usePortalStore();
+  useEffect(() => {
+    if (listing?.id) setCurrentListing(listing.id, listing.title ?? '');
+    return () => clearCurrentListing();
+  }, [listing?.id, listing?.title]);
+  const neighborhood = getNeighborhoodOptions('Beaches').find(
+    (n) => ((listing?.category_tags as string[]) ?? []).includes(n)
+  ) ?? '';
+  const { listings: nearbyListings } = useNearbyListings(
+    listing?.category ?? 'Beaches',
+    'Detailed-Beach',
+    neighborhood,
+    slug || ''
+  );
   const [activeImg, setActiveImg] = useState(0);
   const [dealIdx, setDealIdx] = useState(0);
+
+  const listingImages = getListingImages(listing, thumbnails);
+  const heroImage = listingImages[activeImg] || thumbnails[0];
+  const heroTitle = listing?.title || "Tierra bomba";
+  const heroBreadcrumb = listing?.category
+    ? `${listing.category} / ${listing.sub_category_id || "Island"}`
+    : "Beaches / Island / Caribbean";
+  const heroCompany = listing?.company_name || listing?.title?.split(" ")?.[0] || "ISLA BARÚ";
+  const heroSubtitle = listing?.subtitle || "Eco-Luxury Glamping Experience in Isla Barú";
+  const priceFrom = listing?.price_from ?? listing?.price ?? 177;
+  const priceTo = listing?.price_to ?? priceFrom;
+  const priceUnit = listing?.price_unit || "night";
+  const mapSrc = getListingMapSrc(listing);
+  const contactCards = [
+    {
+      icon: Mail,
+      label: "Email",
+      sub: listing?.email || "Not available",
+      href: listing?.email ? `mailto:${listing.email}` : "#",
+    },
+    {
+      icon: Globe,
+      label: "Website",
+      sub: listing?.website ? listing.website.replace(/^https?:\/\//, "") : "Not available",
+      href: listing?.website || "#",
+    },
+    {
+      icon: Phone,
+      label: "Phone",
+      sub: listing?.phone || listing?.whatsapp || "Not available",
+      href: listing?.phone
+        ? `tel:${listing.phone}`
+        : listing?.whatsapp
+        ? `https://wa.me/${String(listing.whatsapp).replace(/\D/g, "")}`
+        : "#",
+    },
+  ];
+  const listingDescription =
+    listing?.description ||
+    listing?.about ||
+    listing?.details ||
+    `Nestled on the pristine shores of Isla Barú, just a scenic boat ride from Cartagena's historic walls, Playa Scondida offers an unparalleled eco-luxury glamping experience. Here, the Caribbean Sea whispers secrets of ancient mariners, while the jungle canopy shelters you in its emerald embrace.`;
+
+  const beachStartTime = listing?.beach_start || listing?.start_time || "11:50 – 22:00";
+  const beachEndTime = listing?.beach_end || listing?.end_time || "10:00 – 14:00";
+
+  const keyFeatures = normalizeStringArray(listing?.key_features);
+  const services = normalizeStringArray(listing?.services);
+  const amenities = normalizeStringArray(listing?.amenities);
+
+  const travelTipIcons = [Clock, Sun, Luggage];
+  const listingTravelTips =
+    Array.isArray(listing?.travel_tips) && listing.travel_tips.length > 0
+      ? listing.travel_tips.map((tip: any, index: number) => ({
+          icon: travelTipIcons[index % travelTipIcons.length],
+          label:
+            typeof tip === "string"
+              ? `Tip ${index + 1}`
+              : tip.title || tip.label || tip.heading || `Tip ${index + 1}`,
+          sub:
+            typeof tip === "string"
+              ? tip
+              : tip.subtitle || tip.text || tip.description || "",
+        }))
+      : typeof listing?.travel_tips === "string"
+      ? listing.travel_tips
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((tip, index) => ({
+            icon: travelTipIcons[index % travelTipIcons.length],
+            label: `Tip ${index + 1}`,
+            sub: tip,
+          }))
+      : [];
+
+  const travelTips = listingTravelTips.length > 0
+    ? listingTravelTips
+    : [
+        {
+          icon: Clock,
+          label: "Getting There",
+          sub: "45–60 min from Cartagena marina. Transfer included.",
+        },
+        {
+          icon: Sun,
+          label: "Best Time to Go",
+          sub: "7am–10am for clearest waters & best visibility.",
+        },
+        {
+          icon: Luggage,
+          label: "What to Bring",
+          sub: "Swimwear, reef-safe sunscreen, towel, camera.",
+        },
+      ];
+
+  const listingDeals =
+    Array.isArray(listing?.deals) && listing.deals.length > 0
+      ? listing.deals
+      : [];
+
+  const featureItems = keyFeatures.map((label) => ({ icon: WavesIcon, label, sub: "" }));
+
+  const serviceItems = services.map((label) => ({ icon: Umbrella, label, sub: "" }));
+
+  const amenityItems = amenities.map((label) => ({ icon: Droplets, label, sub: "" }));
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-gold-light border-t-black" />
+      </div>
+    );
+  }
+
+  if (error && slug) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white flex-col gap-4">
+        <h2 className="text-xl font-bold text-gray-500">Listing not found</h2>
+        <a href="/Beaches" className="text-gold underline">Return to Beaches</a>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white font-sans w-full overflow-x-hidden">
@@ -675,9 +657,9 @@ export default function BeachDetails() {
       <div className="bg-white px-4 sm:px-6 md:px-10 lg:px-12 pt-5 md:pt-6 pb-6 md:pb-8">
         <div className="mx-auto max-w-[1200px]">
           <p className="text-[10px] md:text-xs text-gray-400 mb-3 md:mb-4 leading-none">
-            La Carta &ndash; Cartagena Culture &amp; Tourism &rsaquo; Activities
-            &rsaquo; Water Sports &rsaquo;{" "}
-            <span className="text-gray-700 font-semibold">Snorkeling</span>
+              La Carta &ndash; Cartagena Culture &amp; Tourism &rsaquo; Beaches
+              &rsaquo; Water Sports &rsaquo;{" "}
+              <span className="text-gray-700 font-semibold">{heroTitle}</span>
           </p>
 
           <div className="flex flex-col lg:flex-row items-start gap-5 lg:gap-6">
@@ -686,24 +668,24 @@ export default function BeachDetails() {
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-black tracking-tight leading-none font-antigua">
-                    Tierra bomba
+                    {heroTitle}
                   </h1>
                   <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-red text-white text-[10px] md:text-xs font-extrabold flex items-center justify-center shrink-0 shadow">
-                    T
+                    {heroCompany?.[0] ?? "B"}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
                   <p className="text-xs md:text-sm text-gray-500">
-                    Beaches / Island / Caribbean
+                    {heroBreadcrumb}
                   </p>
                   <p className="text-[10px] md:text-xs font-extrabold tracking-[0.2em] text-gray-700 uppercase">
-                    ISLA BARÚ
+                    {heroCompany}
                   </p>
                 </div>
 
                 <p className="mt-2 md:mt-6 text-sm md:text-base lg:text-[20px] text-gray-600 leading-snug font-semibold">
-                  Eco-Luxury Glamping Experience in Isla Bar&uacute;
+                  {heroSubtitle}
                 </p>
 
                 <div className="mt-3 md:mt-6">
@@ -711,9 +693,9 @@ export default function BeachDetails() {
                     Starting From
                   </p>
                   <p className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight font-antigua">
-                    $177 &ndash; $515{" "}
+                    ${priceFrom} &ndash; ${priceTo}{" "}
                     <span className="text-sm md:text-base font-normal text-gray-500">
-                      / night
+                      / {priceUnit}
                     </span>
                   </p>
                 </div>
@@ -754,8 +736,8 @@ export default function BeachDetails() {
               >
                 <div className="lg:hidden w-full h-auto">
                   <img
-                    src={thumbnails[activeImg]}
-                    alt="Snorkeling"
+                    src={heroImage}
+                    alt={heroTitle}
                     className="w-full h-full object-cover transition-all duration-700"
                   />
                 </div>
@@ -764,14 +746,14 @@ export default function BeachDetails() {
                   style={{ width: "440px", height: "390px" }}
                 >
                   <img
-                    src={thumbnails[activeImg]}
-                    alt="Snorkeling"
+                    src={heroImage}
+                    alt={heroTitle}
                     className="w-full h-full object-cover transition-all duration-700"
                   />
                 </div>
               </div>
               <div className="flex flex-row sm:flex-col gap-1.5 md:gap-2 shrink-0">
-                {thumbnails.map((src, i) => (
+                {listingImages.map((src, i) => (
                   <div
                     key={i}
                     onClick={() => setActiveImg(i)}
@@ -802,29 +784,10 @@ export default function BeachDetails() {
                   About
                 </p>
                 <h2 className="text-xl md:text-2xl font-extrabold text-black font-antigua mb-3 md:mb-4">
-                  About Jetski
+                  About {heroTitle}
                 </h2>
                 <p className="text-gray-600 text-xs md:text-sm leading-relaxed">
-                  Nestled on the pristine shores of{" "}
-                  <strong className="text-black">Isla Barú</strong>, just a
-                  scenic boat ride from Cartagena's historic walls, Playa
-                  Scondida offers an unparalleled eco-luxury glamping
-                  experience. Here, the Caribbean Sea whispers secrets of
-                  ancient mariners, while the jungle canopy shelters you in its
-                  emerald embrace.
-                  <br />
-                  <br />
-                  Our philosophy: simple, authentic luxury that honors the land.
-                  Each bungalow is crafted from locally-sourced materials,
-                  designed to blend seamlessly with the surrounding nature while
-                  providing every modern comfort you desire. Wake to the calls
-                  of tropical birds, dine on freshly-caught seafood by
-                  candlelight, and fall asleep to the rhythm of gentle waves.
-                  With private docks offering direct ocean access, secluded
-                  beach coves, and immersive nature trails, Playa Scondida is
-                  more than accommodation — it is a transformation. Here, time
-                  moves differently, allowing you to reconnect with what truly
-                  matters.
+                  {listingDescription}
                 </p>
               </div>
 
@@ -958,7 +921,7 @@ export default function BeachDetails() {
                     Address
                   </p>
                   <p className="text-xs md:text-lg font-bold text-black mt-1 leading-snug font-antigua">
-                    Isla Baru, Provincia de Cartagena, Bolívar, Colombia
+                    {listing?.address || listing?.location || "Address not available"}
                   </p>
                 </div>
                 <div className="bg-[#f4f1e6] rounded-xl p-4 md:p-6">
@@ -974,10 +937,10 @@ export default function BeachDetails() {
                   {/* Content Rows */}
                   <div className="space-y-3 md:space-y-4">
                     {[
-                      { label: "Pick Up Time", time: "11:50 – 21:50" },
-                      { label: "Travel Duration", time: "11:50 – 22:00" },
-                      { label: "Beach Start Time", time: "11:50 – 22:00" },
-                      { label: "Beach End Time", time: "10:00 – 14:00" },
+                      { label: "Pick Up Time", time: listing?.pickup_time || "11:50 – 21:50" },
+                      { label: "Travel Duration", time: listing?.travel_duration || "11:50 – 22:00" },
+                      { label: "Beach Start Time", time: beachStartTime },
+                      { label: "Beach End Time", time: beachEndTime },
                     ].map((item, i) => (
                       <div
                         key={i}
@@ -1035,14 +998,13 @@ export default function BeachDetails() {
 
               {/* 3 Contact Icons */}
               <div className="grid grid-cols-3 gap-2 md:gap-2.5">
-                {[
-                  { icon: Mail, label: "Email", sub: "info@ecoadventura.com" },
-                  { icon: Globe, label: "Website", sub: "ecoadventura.co" },
-                  { icon: Phone, label: "Phone", sub: "+57 315 123 4567" },
-                ].map((item, i) => (
-                  <div
+                {contactCards.map((item, i) => (
+                  <a
                     key={i}
-                    className="bg-[#f8f5e9] rounded-xl border border-gold-light shadow-sm p-2 md:p-3 flex flex-col items-center text-center gap-1 cursor-pointer hover:border-gold transition"
+                    href={item.href}
+                    target={item.href && item.href !== '#' ? '_blank' : undefined}
+                    rel={item.href && item.href !== '#' ? 'noreferrer noopener' : undefined}
+                    className="bg-[#f8f5e9] rounded-xl border border-gold-light shadow-sm p-2 md:p-3 flex flex-col items-center text-center gap-1 hover:border-gold transition"
                   >
                     <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl backdrop-blur-lg bg-amber-50 flex items-center justify-center">
                       <item.icon size={14} className="text-gold" />
@@ -1050,169 +1012,85 @@ export default function BeachDetails() {
                     <p className="font-bold text-[10px] md:text-xs text-black">
                       {item.label}
                     </p>
-                    <p className="text-[9px] md:text-[10px] text-black leading-tight font-bold  break-all">
+                    <p className="text-[9px] md:text-[10px] text-black leading-tight font-bold break-all">
                       {item.sub}
                     </p>
-                  </div>
+                  </a>
                 ))}
               </div>
 
               {/* Deals Slider */}
-              {/* <div className="bg-[#f8f5e9] rounded-2xl border border-amber-200 shadow-sm relative overflow-hidden">
-                <div className="flex items-center justify-between px-4 md:px-5 pt-3 md:pt-4 pb-1.5">
-                  <p className="font-bold text-black text-xs md:text-sm font-antigua">
-                    Deals &amp; Promotions
-                  </p>
-                  <span className="text-xs text-amber-600 font-semibold font-antigua">
-                    {dealIdx + 1}/{dealsSlides.length}
-                  </span>
-                </div>
-                <div className="px-4 md:px-5 pb-3 md:pb-4 relative min-h-[100px] md:min-h-[110px]">
-                  <div className="bg-white rounded-xl p-3 md:p-4 border border-amber-100 shadow-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-bold text-black text-xs md:text-sm font-antigua">
-                          {dealsSlides[dealIdx].title}
-                        </p>
-                        <p className="text-[10px] md:text-xs text-gray-500 mt-1 leading-relaxed">
-                          {dealsSlides[dealIdx].desc}
-                        </p>
-                      </div>
-                      <span className="bg-gold text-white text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded shrink-0">
-                        {dealsSlides[dealIdx].highlight}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 md:gap-3 mt-2 md:mt-2.5 text-[9px] md:text-[10px] text-gray-400 flex-wrap">
-                      <span>✓ Valid till March 15, 2025</span>
-                      <span>✓ T&C apply</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setDealIdx(
-                        (p) =>
-                          (p - 1 + dealsSlides.length) % dealsSlides.length,
-                      )
-                    }
-                    className="absolute left-1.5 md:left-2 top-1/2 -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 rounded-full bg-amber-400 text-white flex items-center justify-center"
-                  >
-                    <ChevronLeft size={11} />
-                  </button>
-                  <button
-                    onClick={() =>
-                      setDealIdx((p) => (p + 1) % dealsSlides.length)
-                    }
-                    className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 rounded-full bg-amber-400 text-white flex items-center justify-center"
-                  >
-                    <ChevronRight size={11} />
-                  </button>
-                </div>
-                <div className="flex justify-center gap-1.5 pb-2.5 md:pb-3">
-                  {dealsSlides.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setDealIdx(i)}
-                      className={`h-1.5 rounded-full transition-all ${i === dealIdx ? "bg-gold w-4" : "bg-amber-200 w-1.5"}`}
-                    />
-                  ))}
-                </div>
-              </div> */}
 
+              {listingDeals.length > 0 && (
               <div className="bg-white rounded-2xl  relative ">
                 <div className="flex items-center justify-between  pt-3 md:pt-4 pb-1.5">
                   <p className="font-bold text-black text-xs md:text-sm font-antigua">
                     Deals &amp; Promotions
                   </p>
                   <span className="text-xs text-gold font-semibold font-antigua">
-                    {dealIdx + 1}/{dealsSlides.length}
-                  </span>
-                </div>
-                <div className=" pb-3 md:pb-4 relative ">
-                  <div className="flex flex-col relative bg-[#f8f5e9] w-full h-[130px] rounded-xl p-3 md:p-4 border border-amber-100 shadow-sm">
-                    <div className="flex items-start justify-between gap-2 relative">
-                      <div className="flex-1  space-y-3 mb-3">
-                        <p className="font-bold text-black text-xs md:text-sm font-antigua">
-                          {dealsSlides[dealIdx].title}
-                        </p>
-                        <p className="text-[10px] md:text-xs text-gray-500 mt-1 leading-relaxed">
-                          {dealsSlides[dealIdx].desc}
-                        </p>
+                      {dealIdx + 1}/{listingDeals.length}
+                    </span>
+                  </div>
+                  <div className=" pb-3 md:pb-4 relative ">
+                    <div className="flex flex-col relative bg-[#f8f5e9] w-full h-[130px] rounded-xl p-3 md:p-4 border border-amber-100 shadow-sm">
+                      <div className="flex items-start justify-between gap-2 relative">
+                        <div className="flex-1  space-y-3 mb-3">
+                          <p className="font-bold text-black text-xs md:text-sm font-antigua">
+                            {listingDeals[dealIdx]?.title}
+                          </p>
+                          <p className="text-[10px] md:text-xs text-gray-500 mt-1 leading-relaxed">
+                            {listingDeals[dealIdx]?.desc}
+                          </p>
+                        </div>
                       </div>
-                      {/* <span className="bg-gold text-white text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded shrink-0">
-                                      {dealsSlides[dealIdx].tag}
-                                    </span> */}
-                    </div>
-                    {dealsSlides[dealIdx].tag && (
-                      <Badge className="absolute top-0 right-0 border-0 bg-gradient-to-r from-gold-light to-gold overflow-hidden text-white  rounded-xl rounded-tl-none rounded-br-none  text-xs">
-                        {dealsSlides[dealIdx].tag}
-                      </Badge>
-                    )}
-                    <div className="mt-auto flex items-center justify-between text-[10px] md:text-xs ">
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <Calendar className="w-3 h-3" />
-                        {dealsSlides[dealIdx].valid}
-                      </div>
+                      {listingDeals[dealIdx]?.tag && (
+                        <Badge className="absolute top-0 right-0 border-0 bg-gradient-to-r from-gold-light to-gold overflow-hidden text-white  rounded-xl rounded-tl-none rounded-br-none  text-xs">
+                          {listingDeals[dealIdx]?.tag}
+                        </Badge>
+                      )}
+                      <div className="mt-auto flex items-center justify-between text-[10px] md:text-xs ">
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Calendar className="w-3 h-3" />
+                          {listingDeals[dealIdx]?.valid}
+                        </div>
 
-                      <button className="text-[#c89b2c] font-semibold flex items-center gap-2">
-                        Claim Offer →
+                        <button className="text-[#c89b2c] font-semibold flex items-center gap-2">
+                          Claim Offer →
+                        </button>
+                      </div>
+                      <button
+                        onClick={() =>
+                          setDealIdx(
+                            (p) =>
+                              (p - 1 + listingDeals.length) % listingDeals.length,
+                          )
+                        }
+                        className="absolute z-16 -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-l from-gold to-gold-light text-white flex items-center justify-center shadow"
+                      >
+                        <ChevronLeft size={12} />
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          setDealIdx((p) => (p + 1) % listingDeals.length)
+                        }
+                        className="absolute z-16 -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-r from-gold to-gold-light text-white flex items-center justify-center shadow"
+                      >
+                        <ChevronRight size={12} />
                       </button>
                     </div>
-                    <button
-                      onClick={() =>
-                        setDealIdx(
-                          (p) =>
-                            (p - 1 + dealsSlides.length) % dealsSlides.length,
-                        )
-                      }
-                      className="absolute z-16 -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-l from-gold to-gold-light text-white flex items-center justify-center shadow"
-                    >
-                      <ChevronLeft size={12} />
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        setDealIdx((p) => (p + 1) % dealsSlides.length)
-                      }
-                      className="absolute z-16 -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-r from-gold to-gold-light text-white flex items-center justify-center shadow"
-                    >
-                      <ChevronRight size={12} />
-                    </button>
-                    {/* <button
-                                    onClick={() =>
-                                      setDealIdx(
-                                        (p) =>
-                                          (p - 1 + dealsSlides.length) % dealsSlides.length,
-                                      )
-                                    }
-                                    className="absolute  md:left-2 top-1/2 -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-l from-gold to-gold-light text-white flex items-center justify-center"
-                                  >
-                                    <ChevronLeft size={11} />
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      setDealIdx((p) => (p + 1) % dealsSlides.length)
-                                    }
-                                    className="absolute  md:right-2 top-1/2   -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-r from-gold to-gold-light text-white flex items-center justify-center"
-                                  >
-                                    <ChevronRight size={11} />
-                                  </button> */}
-
-                    {/* <div className="flex items-center gap-2 md:gap-3 mt-2 md:mt-2.5 text-[9px] md:text-[10px] text-gray-400 flex-wrap">
-                                    <span>✓ Valid till March 15, 2025</span>
-                                    <span>✓ T&C apply</span>
-                                  </div> */}
+                  </div>
+                  <div className="flex justify-center gap-1.5 pb-2.5 md:pb-3">
+                    {listingDeals.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setDealIdx(i)}
+                        className={`h-1.5 rounded-full transition-all ${i === dealIdx ? "bg-gold w-4" : "bg-gold w-1.5"}`}
+                      />
+                    ))}
                   </div>
                 </div>
-                <div className="flex justify-center gap-1.5 pb-2.5 md:pb-3">
-                  {dealsSlides.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setDealIdx(i)}
-                      className={`h-1.5 rounded-full transition-all ${i === dealIdx ? "bg-gold w-4" : "bg-gold w-1.5"}`}
-                    />
-                  ))}
-                </div>
-              </div>
+              )}
 
               {/* Also Available On */}
               <div className="bg-white rounded-2xl border border-gold-light shadow-sm p-3 md:p-4 text-center">
@@ -1251,23 +1129,7 @@ export default function BeachDetails() {
                   Travel Tips
                 </span>
                 <div className="mt-3 space-y-2 md:space-y-3">
-                  {[
-                    {
-                      icon: Clock,
-                      label: "Getting There",
-                      sub: "45–60 min from Cartagena marina. Transfer included.",
-                    },
-                    {
-                      icon: Sun,
-                      label: "Best Time to Go",
-                      sub: "7am–10am for clearest waters & best visibility.",
-                    },
-                    {
-                      icon: Luggage,
-                      label: "What to Bring",
-                      sub: "Swimwear, reef-safe sunscreen, towel, camera.",
-                    },
-                  ].map((item, i) => (
+                  {travelTips.map((item, i) => (
                     <div
                       key={i}
                       className="flex items-start gap-2 md:gap-3 bg-[#f8f5e9] rounded-xl p-2.5 md:p-3 border border-gold-light"
@@ -1308,10 +1170,15 @@ export default function BeachDetails() {
               title="Location Map"
               className="w-full h-full border-0"
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              src="https://www.google.com/maps?q=Isla+Baru+Cartagena+Colombia&output=embed"
+              allowFullScreen
+              src={mapSrc}
             />
           </div>
+          {listing?.address && (
+            <p className="mt-3 text-sm text-gray-600 flex items-center gap-2 font-medium">
+              <MapPin size={16} className="text-gold" /> {listing.address}
+            </p>
+          )}
         </div>
       </div>
 
@@ -1327,48 +1194,11 @@ export default function BeachDetails() {
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-10">
-            {[
-              {
-                title: "Key Features",
-                items: [
-                  {
-                    icon: WavesIcon,
-                    label: "Turquoise Beach",
-                    sub: "White sand & calm waters",
-                  },
-                  {
-                    icon: Anchor,
-                    label: "Snorkeling Zone",
-                    sub: "Coral reef access",
-                  },
-                  {
-                    icon: Shell,
-                    label: "Secluded Coves",
-                    sub: "Private beach areas",
-                  },
-                ],
-                hasSub: true,
-              },
-              {
-                title: "Services",
-                items: [
-                  { icon: Umbrella, label: "Sunbed & umbrella rental" },
-                  { icon: Fish, label: "Fresh seafood restaurant" },
-                  { icon: LifeBuoy, label: "Lifeguard on duty" },
-                ],
-                hasSub: false,
-              },
-              {
-                title: "Amenities",
-                items: [
-                  { icon: Droplets, label: "Freshwater showers" },
-                  { icon: Sun, label: "Changing rooms" },
-                  { icon: Umbrella, label: "Beach volleyball court" },
-                  { icon: Anchor, label: "Kayak rental" },
-                ],
-                hasSub: false,
-              },
-            ].map((col, ci) => (
+            {([
+              { title: "Key Features", items: featureItems, hasSub: false },
+              { title: "Services", items: serviceItems, hasSub: false },
+              { title: "Amenities", items: amenityItems, hasSub: false },
+            ].filter(col => col.items.length > 0)).map((col, ci) => (
               <div key={ci}>
                 <h3 className="font-bold text-black text-sm sm:text-lg font-antigua md:text-base mb-3 md:mb-4 pb-3 border-b border-gold-light">
                   {col.title}
@@ -1401,25 +1231,25 @@ export default function BeachDetails() {
       {/* ══ SECTION 5: AROUND THIS PLACE ══ */}
       <div className="px-4 sm:px-6 md:px-10 lg:px-12 pb-6 md:pb-8">
         <div className="mx-auto max-w-[1200px]">
-          <div className="flex items-end justify-between flex-col  w-full mb-4 md:mb-5">
-            <div className="w-full">
-              <p className="text-[10px] md:text-xs uppercase w-full text-center tracking-widest font-medium text-black/70 mb-0.5">
-                Explore
-              </p>
-              <h2 className="text-xl md:text-2xl font-extrabold text-center font-antigua text-black">
-                Around This Place
-              </h2>
-            </div>
-            <div className="flex flex-1 gap-1.5 md:gap-2">
-              <button className="bg-gradient-to-b from-red to-red-light text-white text-[10px] md:text-xs font-bold rounded-full px-3 md:px-4 py-1.5 md:py-2 hover:bg-red transition">
-                Clear Filters
-              </button>
-              <button className="bg-gradient-to-r from-green to-green-light text-white text-[10px] md:text-xs font-bold rounded-full px-3 md:px-4 py-1.5 md:py-2 hover:bg-green transition">
-                + Filters
-              </button>
-            </div>
+          <div className="w-full mb-4 md:mb-5">
+            <p className="text-[10px] md:text-xs uppercase w-full text-center tracking-widest font-medium text-black/70 mb-0.5">
+              Explore
+            </p>
+            <h2 className="text-xl md:text-2xl font-extrabold text-center font-antigua text-black">
+              Around This Place
+            </h2>
           </div>
-          <HorizontalSlider items={sliderPlaces} />
+          {nearbyListings.length > 0 ? (
+            <HorizontalSlider items={nearbyListings.map(l => ({ image: l.image, category: l.category, title: l.title, subtitle: l.subtitle, rating: l.rating, href: l.href }))} />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-black/50 gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              </svg>
+              <p className="text-sm font-medium">No listings found in this neighbourhood yet.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1439,7 +1269,7 @@ export default function BeachDetails() {
             collapsible
             className="space-y-2 md:space-y-3"
           >
-            {faqData.map((item, i) => (
+            {(Array.isArray(listing?.faqs) && listing.faqs.length > 0 ? listing.faqs : []).map((item: any, i: number) => (
               <AccordionItem
                 key={i}
                 value={`faq-${i}`}
@@ -1479,193 +1309,7 @@ export default function BeachDetails() {
         </div>
       </div>
 
-      {/* ══ SECTION 7: REVIEWS ══ */}
-      <div className="bg-[#fbf7ef] py-6 md:py-8 px-4 sm:px-6 md:px-10 lg:px-12">
-              <div className="mx-auto max-w-[1200px]">
-                {/* 3-col header */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-3 mb-5 md:mb-7">
-                  {/* La Carta Team Reviews */}
-                  <div className="bg-[#F7F6F2] rounded-xl p-4 md:p-5 shadow-sm border border-gold-light">
-                    <p className="font-bold text-black text-sm md:text-sm text-center mb-2 md:mb-3 font-antigua">
-                      La Carta Team Reviews
-                    </p>
-                    <div className="space-y-1.5 md:space-y-2">
-                      {[
-                        { label: "Price", rating: 4 },
-                        { label: "Location", rating: 4 },
-                        { label: "Ambiance", rating: 3 },
-                        { label: "Services", rating: 4 },
-                      ].map((item, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-center gap-2"
-                        >
-                          <span className="text-[10px] text-end md:text-xs text-gray-500 w-14 md:w-16 shrink-0">
-                            {item.label}
-                          </span>
-                          <StarRow count={item.rating} />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-center  mt-3 md:mt-4 pt-2.5  border-t-[1.5px] border-gold border-dotted">
-                      <img src="/Group 1686551898.png" alt="" />
-                    </div>
-                  </div>
-      
-                  {/* Client Say's */}
-                  <div className="relative rounded-xl px-6 py-6 md:px-10 md:py-8 text-center flex flex-col items-center space-y-8 border border-gold-light shadow-[inset_0_0_15px_rgba(209,187,107,0.5)] bg-gradient-to-b from-[#F7F6F2] to-[#EFEDE7]">
-                    {/* Reviews Label */}
-                    <p className="uppercase tracking-[0.35em] text-gray-600 text-xs md:text-sm ">
-                      Feedback
-                    </p>
-                    <h3 className="font-antigua text-2xl md:text-4xl text-gray-900 mb-6">
-                      Client Say's
-                    </h3>
-                    <div className="flex items-center gap-2 justify-center">
-                      <p className="text-lg md:text-lg flex font-bold text-gray-800 ">
-                        <Star className="w-6 h-6 fill-gold-light text-gold" />
-                        4.8 OUT OF 5 — BASED ON 124 REVIEWS
-                      </p>
-                    </div>
-                  </div>
-      
-                  {/* Rating Breakdown */}
-                  <div
-                    className="rounded-xl  px-4 py-4 md:px-5 md:py-5
-                               border border-gold-light
-                               bg-[#F7F6F2]
-                               shadow-[0_12px_40px_rgba(0,0,0,0.06)]
-                               flex flex-col gap-2"
-                  >
-                    <div className="flex flex-col lg:flex-row min-[1024px]:max-[1178px]:flex-col items-start gap-2 ">
-                      {/* LEFT SIDE */}
-                      <div className="flex flex-col gap-1 items-center  text-center  w-full md:min-w-xl">
-                        <p className="text-6xl md:text-5xl font-antigua text-gold leading-none">
-                          5.5
-                        </p>
-      
-                        <p className="text-gray-600 text-sm ">66 Ratings</p>
-      
-                        <div className="flex items-center gap-2 text-gray-700 text-base">
-                          <img
-                            src="https://www.svgrepo.com/show/475656/google-color.svg"
-                            alt="Google"
-                            className="w-3 h-3"
-                          />
-                          <span className="font-medium text-xs">On Google</span>
-                        </div>
-      
-                        <div className="text-sm text-gray-700">
-                          <span className="text-gold font-bold">3.5 ★</span>
-                          <span className="text-gray-500"> (100+)</span>
-                        </div>
-      
-                        <p className="text-[8px] text-gray-500">*As Of 2026-02-12</p>
-                      </div>
-      
-                      {/* RIGHT SIDE */}
-                      <div className="flex-1 space-y-1 w-full">
-                        {categories.map((item, i) => {
-                          const percentage = (item.rating / MAX_RATING) * 100;
-      
-                          return (
-                            // <div key={i} className="flex items-center gap-2 justify-center ">
-                            <div key={i} className="flex items-center gap-2 w-full">
-                              {/* Label */}
-                              <div className="w-28 flex shrink-0 justify-end items-center gap-1 text-gold text-sm">
-                                <span>{item.label}</span>
-                                <span>★</span>
-                              </div>
-      
-                              {/* Bar */}
-                              <div className="flex-1 min-w-[120px] h-2 rounded-full bg-gray-300/70 overflow-hidden">
-                                <div
-                                  className="h-full w-full rounded-full bg-gradient-to-r from-gold to-gold-light transition-all duration-500"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-      
-                    {/* BUTTON */}
-                    <Button
-                      className="w-full mt-4
-                                 bg-gradient-to-r from-[#28B463] to-[#196F3D]
-                                 text-white font-antigua md:text-lg text-sm
-                                 py-5 rounded-full
-                                 shadow-lg
-                                 hover:scale-[1.02] transition duration-300"
-                    >
-                      ✎ Give Your Opinion
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-      {/* Filter row */}
-      <div className="bg-[#fbf7ef] py-8 md:py-12 px-4 sm:px-6 md:px-10 lg:px-12">
-        <div className="mx-auto max-w-[950px]">
-          {/* Filter row */}
-          <div className="flex items-center justify-between mb-8">
-            <button className="bg-gradient-to-b from-gold to-gold-light text-white text-xs uppercase font-bold rounded-full px-6 py-2 flex items-center gap-2">
-              Trier
-              <span className="text-[10px]">▼</span>
-            </button>
-
-            <p className="text-xs tracking-wide text-gray-800">
-              PAGE <span className="font-bold">1</span> OF{" "}
-              <span className="font-bold">3 – 42</span> REVIEWS
-            </p>
-          </div>
-
-          {/* Review Cards */}
-          <div className="space-y-6">
-            {reviews.map((r, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h4 className="font-antigua sm:text-xl text-lg text-black">
-                      {r.name}
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-1">{r.location}</p>
-                  </div>
-
-                  <StarRow count={r.rating} />
-                </div>
-
-                {/* Review Text */}
-                <p className="text-sm font-medium text-gray-800 leading-relaxed">
-                  {r.text}
-                </p>
-
-                {/* Footer */}
-                <div className="flex items-center justify-between mt-6">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={r.avatar}
-                      alt=""
-                      className="w-9 h-9 rounded-full object-cover"
-                    />
-                    <span className="text-xs text-gray-800">{r.location}</span>
-                  </div>
-
-                  <button className="border border-red-light text-red-light text-xs font-medium rounded-full px-5 py-1.5 hover:bg-red-50 transition">
-                    Response
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <ReviewSection listingId={listing?.id ?? ''} />
 
       {/* ══ SECTION 8: PREMIUM LISTING ══ */}
       {/* <div className="bg-[#fbf7ef] py-6 md:py-8 px-4 sm:px-6 md:px-10 lg:px-12">
@@ -1685,7 +1329,7 @@ export default function BeachDetails() {
               </button>
             </div>
           </div>
-          <Horizontal2Slider items={sliderPlaces} />
+          <Horizontal2Slider items={nearbyListings.map(l => ({ image: l.image, category: l.category, title: l.title, subtitle: l.subtitle, rating: l.rating, href: l.href }))} />
         </div>
         {/* </div> */}
       </section>

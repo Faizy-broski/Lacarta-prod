@@ -1,134 +1,26 @@
 import Hero from "@public/components/listings/Hero";
 import TeamSection from "@public/components/about/TeamSection";
 import type { TeamMember } from "@public/components/about/TeamMemberCard";
+import { fetchTeamMembers } from "@/lib/services/team.service";
 import { Button } from "@public/components/ui/button";
 import Link from "next/link";
 
-const teamMembers: TeamMember[] = [
-  {
-    name: "Cris Morelo",
-    role: "Head of Creative & HR",
-    image: "/lacarta_images/cris-morelo.png",
-    socials: {
-      email: "cris@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Maria Moreno",
-    role: "Editor in Chief",
-    image: "/lacarta_images/Maria Moreno.webp",
-    socials: {
-      email: "maria@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Alejandra Quiroga",
-    role: "VP Marketing & Content",
-    image: "/lacarta_images/Alejandra-Quiroga.png",
-    socials: {
-      email: "alejandra@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Isabella Castillo",
-    role: "Head of Social Media",
-    image: "/lacarta_images/Isabella-Castillo.png",
-    socials: {
-      email: "isabella@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Lizeth Cantillo",
-    role: "Travel Concierge & Coordinator",
-    image: "/lacarta_images/Lizeth-Cantillo.png",
-    socials: {
-      email: "lizeth@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Ivan la Spada",
-    role: "Head of Design",
-    image: "/lacarta_images/Ivan la Spada.png",
-    socials: {
-      email: "ivan@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Sofia Belen Turbay",
-    role: "Chief Legal Officer – Head of Sponsorships & Partnerships",
-    image: "/lacarta_images/Sofia Belen Turbay.png",
-    socials: {
-      email: "sofia@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Ivan Mondol",
-    role: "Head of Real Estate",
-    image: "/lacarta_images/Ivan Mondol.png",
-    socials: {
-      email: "ivanm@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Juan Pablo Moreno",
-    role: "Head of Tours & Client Relations",
-    image: "/lacarta_images/Juan Pablo Moreno.png",
-    socials: {
-      email: "juanpablo@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Miguel LaLibertad",
-    role: "Founder – CEO & CMO",
-    image: "/lacarta_images/Miguel LaLibertad.webp",
-    socials: {
-      email: "miguel@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-  {
-    name: "Daniel Fernando De La Espriella",
-    role: "Social Media Manager",
-    image: "/lacarta_images/Daniel Fernando De La Espriella.png",
-    socials: {
-      email: "daniel@lacarta.com",
-      twitter: "#",
-      instagram: "#",
-      linkedin: "#",
-    },
-  },
-];
+export default async function AboutUs() {
+  const dbMembers = await fetchTeamMembers(true);
 
-export default function AboutUs() {
+  const teamMembers: TeamMember[] = dbMembers.map((m) => ({
+    name: m.name,
+    role: m.role,
+    image: m.photo_url ?? '/lacarta_images/placeholder.png',
+    slug: m.slug,
+    socials: {
+      email: m.email ?? undefined,
+      twitter: m.twitter_url ?? undefined,
+      instagram: m.instagram_url ?? undefined,
+      linkedin: m.linkedin_url ?? undefined,
+    },
+  }));
+
   return (
     <div className="min-h-screen">
       {/* Hero */}

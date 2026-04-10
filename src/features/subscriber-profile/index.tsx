@@ -53,10 +53,11 @@ function StatCard({ icon: Icon, count, label }: { icon: React.ElementType; count
   )
 }
 
-function Section({ icon: Icon, title, viewAllHref, children }: {
+function Section({ icon: Icon, title, viewAllHref, onViewAll, children }: {
   icon: React.ElementType
   title: string
   viewAllHref?: string
+  onViewAll?: () => void
   children: React.ReactNode
 }) {
   return (
@@ -71,6 +72,11 @@ function Section({ icon: Icon, title, viewAllHref, children }: {
             View all →
           </a>
         )}
+        {onViewAll && (
+          <button onClick={onViewAll} className='text-sm text-[#CF9921] hover:underline'>
+            View all →
+          </button>
+        )}
       </div>
       {children}
     </div>
@@ -81,6 +87,8 @@ export function SubscriberProfilePage() {
   const user = useAuthStore((s) => s.user)
   const [profileData, setProfileData] = useState<ProfileData>({ favorites: [], deals: [], events: [], resources: [] })
   const [loading, setLoading] = useState(true)
+  const [showAllFavs, setShowAllFavs] = useState(false)
+  const [showAllDeals, setShowAllDeals] = useState(false)
 
   useEffect(() => {
     if (!user?.accountNo) return
@@ -227,12 +235,16 @@ export function SubscriberProfilePage() {
       ) : (
         <div className='grid gap-5 sm:grid-cols-2'>
           {/* Favorites */}
-          <Section icon={Heart} title='Favorites' viewAllHref='/'>
+          <Section
+            icon={Heart}
+            title='Favorites'
+            onViewAll={profileData.favorites.length > 4 && !showAllFavs ? () => setShowAllFavs(true) : undefined}
+          >
             {profileData.favorites.length === 0 ? (
               <p className='text-sm text-gray-400'>No saved items yet.</p>
             ) : (
               <div className='space-y-3'>
-                {profileData.favorites.slice(0, 4).map((item) => (
+                {(showAllFavs ? profileData.favorites : profileData.favorites.slice(0, 4)).map((item) => (
                   <div key={item.id} className='flex items-center justify-between text-sm'>
                     <div>
                       <p className='font-medium leading-tight text-gray-800'>{item.title}</p>
@@ -252,12 +264,16 @@ export function SubscriberProfilePage() {
           </Section>
 
           {/* Active Deals */}
-          <Section icon={Tag} title='Active Deals' viewAllHref='/'>
+          <Section
+            icon={Tag}
+            title='Active Deals'
+            onViewAll={profileData.deals.length > 4 && !showAllDeals ? () => setShowAllDeals(true) : undefined}
+          >
             {profileData.deals.length === 0 ? (
               <p className='text-sm text-gray-400'>No active deals right now.</p>
             ) : (
               <div className='space-y-3'>
-                {profileData.deals.slice(0, 4).map((deal) => (
+                {(showAllDeals ? profileData.deals : profileData.deals.slice(0, 4)).map((deal) => (
                   <div key={deal.id} className='flex items-center justify-between text-sm'>
                     <div>
                       <p className='font-medium leading-tight text-gray-800'>{deal.title}</p>

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useCallback } from 'react'
-import { Upload } from 'lucide-react'
+import { Camera } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import Cropper from 'react-easy-crop'
 import { supabase } from '@/lib/supabase/supabase.ts'
@@ -187,22 +187,29 @@ export default function ProfilePicUpload({
     <>
       {/* AVATAR */}
       <div
-        className='relative mx-auto w-fit h-fit cursor-pointer'
+        className='group relative mx-auto w-fit h-fit cursor-pointer'
         onClick={() => setDialogOpen(true)}
+        title='Upload profile photo'
       >
-        <Avatar className='h-24 w-24'>
+        <Avatar className='h-24 w-24 ring-2 ring-border'>
           <AvatarImage src={value} />
-          <AvatarFallback>
+          <AvatarFallback className='bg-muted text-muted-foreground text-lg font-semibold'>
             {user?.name
               ?.split(' ')
               .map((word: any) => word[0])
               .join('')
-              .toUpperCase()}
+              .toUpperCase() ?? <Camera className='h-8 w-8 text-muted-foreground' />}
           </AvatarFallback>
         </Avatar>
 
-        <div className='absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition hover:opacity-100'>
-          <Upload className='h-5 w-5 text-white' />
+        {/* Camera badge — always visible, brighter on hover */}
+        <div className='absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary shadow-md ring-2 ring-background transition-transform group-hover:scale-110'>
+          <Camera className='h-3.5 w-3.5 text-primary-foreground' />
+        </div>
+
+        {/* Hover overlay */}
+        <div className='absolute inset-0 flex items-center justify-center rounded-full bg-black/30 opacity-0 transition group-hover:opacity-100'>
+          <Camera className='h-6 w-6 text-white drop-shadow' />
         </div>
       </div>
 

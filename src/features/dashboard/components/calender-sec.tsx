@@ -1,6 +1,5 @@
 'use client'
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -10,39 +9,46 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card'
+import { getEventsForMonth, type CalendarEvent } from '@/lib/services/analytics.service'
 
-const upcoming = [
-  {
-    name: 'Beach Guide',
-    color: 'bg-gradient-to-r from-[#CF9921] to-[#D2BB6B]',
-  },
-  {
-    name: 'Restaurant Review',
-    color: 'bg-gradient-to-r from-[#980001] to-[#D40D00]',
-  },
-  {
-    name: 'Hotel Feature',
-    color: 'bg-gradient-to-r from-[#22C55E]  to-[#105F2D]',
-  },
-  {
-    name: 'Local Events',
-    color: 'bg-gradient-to-r from-[#6FC6E2] to-[#1B81B2]',
-  },
-]
-
-const eventDays = {
-  beach: [new Date(2024, 11, 3)],
-  restaurant: [new Date(2024, 11, 5), new Date(2024, 11, 18)],
-  hotel: [new Date(2024, 11, 8), new Date(2024, 11, 25)],
-  local: [new Date(2024, 11, 12), new Date(2024, 11, 15)],
+function toLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
 export default function EventsScheduled() {
-  const [date, setDate] = useState<Date | undefined>(new Date(2024, 12, 25)) // December = 11
+  const today = new Date()
+  const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+
+  useEffect(() => {
+    getEventsForMonth(currentMonth.getFullYear(), currentMonth.getMonth()).then(setEvents)
+  }, [currentMonth])
+
+  // Build modifiers: one Date[] per unique category slug
+  const categoryMap: Record<string, { dates: Date[]; color: string; name: string }> = {}
+  for (const e of events) {
+    const key = (e.categoryName ?? 'other').toLowerCase().replace(/\s+/g, '_')
+    if (!categoryMap[key]) categoryMap[key] = { dates: [], color: e.categoryColor, name: e.categoryName }
+    categoryMap[key].dates.push(toLocalDate(e.eventDate))
+  }
+
+  // Deduplicate upcoming category names for the footer badges
+  const upcomingCategories = Object.values(categoryMap)
+
+  // Build Calendar modifiers and modifiersClassNames
+  const dotColors = ['bg-yellow-500', 'bg-red-500', 'bg-green-500', 'bg-blue-500', 'bg-purple-500']
+  const modifiers: Record<string, Date[]> = {}
+  const modifiersClassNames: Record<string, string> = {}
+  Object.keys(categoryMap).forEach((key, idx) => {
+    modifiers[key] = categoryMap[key].dates
+    modifiersClassNames[key] = `after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:${dotColors[idx % dotColors.length]}`
+  })
+
+  const monthLabel = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   return (
     <>
-      {/* ====================== CALENDAR CARD ====================== */}
       <Card className='w-full overflow-hidden rounded-xl border bg-[#F9FAFB] shadow-sm'>
         <CardHeader className='px-6 pb-2'>
           <div className='flex flex-col items-start justify-between sm:flex-row'>
@@ -50,254 +56,80 @@ export default function EventsScheduled() {
               <CardTitle className='font-antigua text-xl font-semibold'>
                 Events Scheduled
               </CardTitle>
-              <p className='mt-1 text-sm text-muted-foreground'>
-                December 2024
-              </p>
+              <p className='mt-1 text-sm text-muted-foreground'>{monthLabel}</p>
             </div>
-
-            {/* Arrows */}
             <div className='flex items-center gap-3 text-muted-foreground'>
-              <button className='hover:text-black'>‹</button>
-              <button className='hover:text-black'>›</button>
+              <button
+                className='hover:text-black'
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+              >
+                ‹
+              </button>
+              <button
+                className='hover:text-black'
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+              >
+                ›
+              </button>
             </div>
-            {/* <div className="flex items-center gap-2 text-muted-foreground">
-  <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-muted hover:text-black">
-    ‹
-  </button>
-  <button className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-muted hover:text-black">
-    ›
-  </button>
-</div> */}
           </div>
         </CardHeader>
 
         <CardContent className='relative px-3 sm:px-6'>
           <Calendar
-            // mode='single'
-            selected={date}
-            // onSelect={setDate}
-            month={new Date(2024, 11)}
+            month={currentMonth}
             showOutsideDays={false}
             fixedWeeks
-            modifiers={eventDays}
-            modifiersClassNames={{
-              beach:
-                'after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-yellow-500',
-              restaurant:
-                'after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-green-500',
-              hotel:
-                'after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-red-500',
-              local:
-                'after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-blue-500',
-            }}
+            modifiers={modifiers}
+            modifiersClassNames={modifiersClassNames}
             className='w-full'
             classNames={{
               months: 'w-full',
               month: 'w-full',
               table: 'w-full border-collapse',
-              // head_row: 'grid grid-cols-7 mb-3',
               head_row: 'grid grid-cols-7 mb-2 sm:mb-3',
-              head_cell:
-                'text-center text-xs font-medium text-muted-foreground',
-              // row: 'grid grid-cols-7 mt-3',
+              head_cell: 'text-center text-xs font-medium text-muted-foreground',
               row: 'grid grid-cols-7 mt-2 sm:mt-3',
-              // cell: 'relative flex items-center justify-center h-11',
               cell: 'relative flex items-center justify-center h-9 sm:h-11',
-              //           day: `
-              //   h-10 w-10 flex items-center justify-center
-              //   text-sm font-normal text-gray-700
-              //   rounded-full hover:bg-gray-200
-              // `,
               day: `
-  h-8 w-8 sm:h-10 sm:w-10
-  flex items-center justify-center
-  text-xs sm:text-sm
-  font-normal text-gray-700
-  rounded-full hover:bg-gray-200
-`,
-              //           day_selected: `
-              //   border-2 border-teal-500
-              //   text-red-600
-              //   bg-transparent
-              //   rounded-xl
-              // `,
+                h-8 w-8 sm:h-10 sm:w-10
+                flex items-center justify-center
+                text-xs sm:text-sm
+                font-normal text-gray-700
+                rounded-full hover:bg-gray-200
+              `,
               day_selected: `
-  border-2 border-teal-500
-  text-red-600
-  bg-transparent
-  rounded-lg sm:rounded-xl
-`,
+                border-2 border-teal-500
+                text-red-600
+                bg-transparent
+                rounded-lg sm:rounded-xl
+              `,
               day_today: 'bg-transparent',
-              caption: 'hidden', // remove default month header
+              caption: 'hidden',
             }}
           />
-          {/* <Calendar
-            mode='single'
-            selected={date}
-            onSelect={setDate}
-            modifiers={eventDays}
-            modifiersClassNames={{
-              beach:
-                'after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-yellow-500',
-              restaurant:
-                'after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-green-500',
-              hotel:
-                'after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-red-500',
-              local:
-                'after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-blue-500',
-            }}
-            className='w-full'
-            classNames={{
-              // months: 'w-full',
-              // month: 'w-full space-y-4',
-              // head_row: 'flex justify-between',
-              head_row: 'flex w-full',
-
-              head_cell:
-                'w-9 text-xs font-medium text-muted-foreground text-center',
-              // row: 'flex justify-between mt-3',
-              cell: 'relative h-10 w-9 text-center',
-              day: 'h-9 w-9 text-sm font-normal rounded-full hover:bg-gray-200',
-              day_selected:
-                'border-2 border-teal-500 text-red-600 bg-transparent rounded-xl',
-              day_today: 'bg-transparent',
-            }}
-          />
-          <Calendar
-            mode='single'
-            selected={date}
-            onSelect={setDate}
-            className='rounded-md'
-            classNames={{
-              head_row: 'flex',
-              head_cell:
-                'text-muted-foreground rounded-md mx-auto  font-medium text-xs',
-              row: 'flex mt-2',
-              cell: cn(
-                'relative p-0 text-center text-sm',
-                'focus-within:relative focus-within:z-20'
-              ),
-              day: cn(
-                'h-9 w-9 p-0 font-normal aria-selected:opacity-100',
-                'hover:bg-accent hover:text-accent-foreground',
-                'focus:bg-accent focus:text-accent-foreground'
-              ),
-              day_selected:
-                'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground',
-              day_today: 'bg-accent text-accent-foreground',
-            }}
-          /> */}
-
-          {/* Divider */}
-          {/* <div className='mt-6 border-t pt-4'>
-            <h3 className='text-sm font-medium text-muted-foreground'>
-              Upcoming
-            </h3>
-
-            <div className='mt-3 flex flex-wrap gap-2'>
-              {upcoming.map((item) => (
-                <Badge
-                  key={item.name}
-                  className={`rounded-full px-4 py-1 text-xs font-medium text-white ${item.color}`}
-                >
-                  {item.name}
-                </Badge>
-              ))}
-            </div>
-          </div> */}
         </CardContent>
+
         <CardFooter className='border-t px-6'>
           <div className='space-y-3'>
-            {/* <h3 className='text-lg font-semibold'>Upcoming</h3> */}
-            <h3 className='text-sm font-medium text-muted-foreground'>
-              Upcoming
-            </h3>
-
-            {/* <div className='flex gap-2'>
-              {upcoming.map((item) => (
-                <Badge
-                  key={item.name}
-                  variant='secondary'
-                  className={cn(
-                    'text-xsm px-3 py-1 font-medium',
-                    item.color,
-                    'text-white transition-opacity hover:opacity-90'
-                  )}
-                >
-                  {item.name}
-                </Badge>
-              ))}
-            </div> */}
-            <div className='mt-3 flex flex-wrap gap-2'>
-              {upcoming.map((item) => (
-                <Badge
-                  key={item.name}
-                  className={`rounded-full border-0 px-3 py-1 text-xs font-medium text-white ${item.color}`}
-                >
-                  {item.name}
-                </Badge>
-              ))}
-            </div>
+            <h3 className='text-sm font-medium text-muted-foreground'>Upcoming</h3>
+            {upcomingCategories.length === 0 ? (
+              <p className='text-xs text-muted-foreground'>No events this month</p>
+            ) : (
+              <div className='mt-3 flex flex-wrap gap-2'>
+                {upcomingCategories.map((cat) => (
+                  <Badge
+                    key={cat.name}
+                    className={`rounded-full border-0 px-3 py-1 text-xs font-medium text-white ${cat.color}`}
+                  >
+                    {cat.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </CardFooter>
       </Card>
-      {/* <Card className='overflow-hidden border p-0 shadow-sm'>
-        <CardHeader className='pt-4 pb-2'>
-          <div className='flex items-center justify-between'>
-            <CardTitle className='font-antigua text-xl font-semibold'>
-              Events Scheduled
-            </CardTitle>
-          </div>
-        </CardHeader>
-
-        <CardContent className='px-3 pt-1 pb-6 sm:px-6'>
-          <Calendar
-            mode='single'
-            selected={date}
-            onSelect={setDate}
-            className='rounded-md'
-            classNames={{
-              head_row: 'flex',
-              head_cell:
-                'text-muted-foreground rounded-md mx-auto  font-medium text-xs',
-              row: 'flex mt-2',
-              cell: cn(
-                'relative p-0 text-center text-sm',
-                'focus-within:relative focus-within:z-20'
-              ),
-              day: cn(
-                'h-9 w-9 p-0 font-normal aria-selected:opacity-100',
-                'hover:bg-accent hover:text-accent-foreground',
-                'focus:bg-accent focus:text-accent-foreground'
-              ),
-              day_selected:
-                'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground',
-              day_today: 'bg-accent text-accent-foreground',
-            }}
-          />
-        </CardContent>
-        <CardFooter className='p-2'>
-          <div className='space-y-3'>
-            <h3 className='text-lg font-semibold'>Upcoming</h3>
-
-            <div className='flex gap-2'>
-              {upcoming.map((item) => (
-                <Badge
-                  key={item.name}
-                  variant='secondary'
-                  className={cn(
-                    'text-xsm px-3 py-1 font-medium',
-                    item.color,
-                    'text-white transition-opacity hover:opacity-90'
-                  )}
-                >
-                  {item.name}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </CardFooter>
-      </Card> */}
     </>
   )
 }

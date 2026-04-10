@@ -97,11 +97,11 @@ export type CategoryGroup =
 
 const UNIVERSAL_FREE: FeatureSlug[] = [
   'basic_info', 'featured_image', 'social_sharing', 'category_tags',
-  'favorites_save', 'search_filter', 'dashboard_access',
+  'favorites_save', 'search_filter', 'dashboard_access', 'address_map',
 ]
 
 const UNIVERSAL_STANDARD: FeatureSlug[] = [
-  'gallery', 'about_description', 'address_map', 'analytics', 'reviews',
+  'gallery', 'about_description', 'analytics', 'reviews',
   'notifications', 'services_amenities', 'third_party_links',
 ]
 

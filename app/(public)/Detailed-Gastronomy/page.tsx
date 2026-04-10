@@ -1,2 +1,2 @@
 'use client'
-export { default } from '@public/pages/Detailed-Gyst'
+export { default } from '@public/pages/Detailed-Gastronomy'

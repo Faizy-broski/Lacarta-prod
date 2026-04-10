@@ -318,7 +318,7 @@
 
 'use client'
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import NewsletterSection from "@public/components/layout/cartagenaNews";
 const logo = "/assets/Logo.png.png";
 const whatsapp = "/assets/whatsapp.svg";
@@ -327,17 +327,26 @@ import { Button } from "@public/components/ui/button";
 import Link from 'next/link';
 import { BookingDialog } from "@public/components/bookingForm";
 import { TopBar } from "./TopBar";
+import PortalAuthDialog from "@public/components/auth/PortalAuthDialog";
+import { FavoritesDrawer } from "./FavoritesDrawer";
+import { SharePopover } from "./SharePopover";
+import { useAuthStore } from "@/lib/auth/auth.store";
+import { usePathname } from 'next/navigation';
+import { supabase } from "@/lib/supabase";
+import { usePortalStore } from "@public/store/portalStore";
+import { addFavorite, removeFavorite, isFavorited } from "@/lib/services/favorites.service";
+import { toast } from "sonner";
 import {
   Heart,
   Menu,
   X,
   Facebook,
-  Share2,
   Twitter,
   Instagram,
   Youtube,
   Linkedin,
   CloudMoon,
+  LogOut,
 } from "lucide-react";
 
 const Layout = ({ children }) => {
@@ -362,6 +371,96 @@ const Layout = ({ children }) => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [favOpen, setFavOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const { currentListingId, currentListingTitle } = usePortalStore();
+  const pathname = usePathname();
+  const [favorited, setFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+  const [favCount, setFavCount] = useState(0);
+
+  // Load total favorites count on login
+  useEffect(() => {
+    if (!user?.accountNo) { setFavCount(0); return; }
+    supabase
+      .from('favorites')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.accountNo)
+      .then(({ count }) => setFavCount(count ?? 0));
+  }, [user?.accountNo]);
+
+  const refreshFavCount = useCallback(() => {
+    if (!user?.accountNo) return;
+    supabase
+      .from('favorites')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.accountNo)
+      .then(({ count }) => setFavCount(count ?? 0));
+  }, [user?.accountNo]);
+
+  // Check favorite status whenever listing/page or user changes
+  useEffect(() => {
+    if (!user?.accountNo) { setFavorited(false); return; }
+    if (currentListingId) {
+      isFavorited(user.accountNo, 'listing', currentListingId).then(setFavorited);
+    } else {
+      // Check if the current page is favorited
+      isFavorited(user.accountNo, 'page', pathname).then(setFavorited);
+    }
+  }, [user?.accountNo, currentListingId, pathname]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    logout();
+  };
+
+  const handleFavorite = useCallback(async () => {
+    if (!user) { setAuthOpen(true); return; }
+    setFavLoading(true);
+    try {
+      if (currentListingId) {
+        // Favorite a specific listing
+        if (favorited) {
+          setFavorited(false);
+          setFavCount((c) => Math.max(0, c - 1));
+          await removeFavorite(user.accountNo, 'listing', currentListingId);
+          toast.success('Removed from favorites');
+        } else {
+          setFavorited(true);
+          setFavCount((c) => c + 1);
+          await addFavorite(user.accountNo, 'listing', currentListingId);
+          toast.success('Saved to favorites!');
+        }
+      } else {
+        // Favorite the current page
+        const pageTitle = typeof document !== 'undefined' ? document.title : pathname;
+        if (favorited) {
+          setFavorited(false);
+          setFavCount((c) => Math.max(0, c - 1));
+          await removeFavorite(user.accountNo, 'page', pathname);
+          toast.success('Page removed from favorites');
+        } else {
+          setFavorited(true);
+          setFavCount((c) => c + 1);
+          await addFavorite(user.accountNo, 'page', pathname, pageTitle);
+          toast.success('Page saved to favorites!');
+        }
+      }
+    } catch (err) {
+      // Revert optimistic updates on failure
+      setFavorited(favorited);
+      refreshFavCount();
+      const msg = err instanceof Error ? err.message : 'Could not update favorites';
+      console.error('[handleFavorite]', msg);
+      toast.error(msg);
+    } finally {
+      // Always sync with real DB count after the operation
+      refreshFavCount();
+      setFavLoading(false);
+    }
+  }, [user, currentListingId, favorited, pathname, refreshFavCount]);
 
   return (
     <>
@@ -397,15 +496,49 @@ const Layout = ({ children }) => {
 
         {/* Right side */}
         <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 z-10 flex-shrink-0">
-          <Link href="#" className="text-white">
+          <button
+            onClick={() => user ? setFavOpen(true) : setAuthOpen(true)}
+            className="relative text-white"
+            title={user ? "My Favorites" : "Sign in to save favorites"}
+          >
             <Heart className="text-gold w-5 h-5 sm:w-6 sm:h-6" />
-          </Link>
+            {user && favCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-[#f15c5d] text-white text-[9px] font-bold leading-none">
+                {favCount > 99 ? '99+' : favCount}
+              </span>
+            )}
+          </button>
 
           <p className="text-white hidden lg:block">|</p>
 
-          <Link href="#" className="text-white text-sm hidden lg:block whitespace-nowrap">
-            Login
-          </Link>
+          {user ? (
+            <div className="hidden lg:flex items-center gap-2">
+              <Link
+                href="/profile"
+                className="text-white text-sm font-antigua truncate max-w-[100px] hover:text-gold transition"
+                title="My Profile"
+              >
+                {user.name || user.email}
+              </Link>
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                className="text-gray-300 hover:text-white transition"
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAuthOpen(true)}
+              className="text-white text-sm hidden lg:block whitespace-nowrap hover:text-gold transition font-antigua"
+            >
+              Login
+            </button>
+          )}
+
+          <PortalAuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+          <FavoritesDrawer open={favOpen} onClose={() => setFavOpen(false)} />
 
           <Button
             onClick={() => setDialogOpen(true)}
@@ -425,12 +558,17 @@ const Layout = ({ children }) => {
 
         {/* Share & Heart floating icons - responsive positioning */}
         <div className="inline absolute z-[999] top-20 sm:top-24 lg:top-28 right-3 sm:right-4 lg:right-auto lg:left-4 flex flex-col items-center gap-2">
-          <div className="bg-[#f15c5d] p-1.5 sm:p-2 lg:p-3 rounded-full">
-            <Share2 className="w-4 h-4 sm:w-5 sm:h-5 lg:w-8 lg:h-8 text-white font-bold fill-white" />
-          </div>
-          <div className="bg-yellow-400 p-1.5 sm:p-2 lg:p-3 rounded-full">
-            <Heart className="w-4 h-4 sm:w-5 sm:h-5 lg:w-8 lg:h-8 text-black font-bold" />
-          </div>
+          <SharePopover title={currentListingTitle ?? undefined} />
+          <button
+            onClick={handleFavorite}
+            disabled={favLoading}
+            title={favorited ? "Remove from favorites" : "Save to favorites"}
+            className={`p-1.5 sm:p-2 lg:p-3 rounded-full hover:brightness-110 transition active:scale-95 ${
+              favorited ? 'bg-gold' : 'bg-yellow-400'
+            }`}
+          >
+            <Heart className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-8 lg:h-8 font-bold ${favorited ? 'fill-white text-white' : 'text-black'}`} />
+          </button>
         </div>
 
         {/* WhatsApp floating button */}
@@ -467,13 +605,30 @@ const Layout = ({ children }) => {
             ))}
             {/* Login & Book Trip in mobile menu */}
             <div className="flex flex-col items-center gap-3 pt-2 border-t border-gray-700 w-full px-8">
-              <Link
-                href="#"
-                className="text-white text-sm hover:text-[#d0a439] transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                Login
-              </Link>
+              {user ? (
+                <>
+                  <Link
+                    href="/profile"
+                    className="text-white text-sm hover:text-[#d0a439] transition-colors font-antigua"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    My Profile
+                  </Link>
+                  <button
+                    onClick={() => { handleLogout(); setIsOpen(false); }}
+                    className="text-white text-sm hover:text-[#d0a439] transition-colors font-antigua flex items-center gap-1.5"
+                  >
+                    <LogOut size={14} /> Sign Out
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => { setAuthOpen(true); setIsOpen(false); }}
+                  className="text-white text-sm hover:text-[#d0a439] transition-colors font-antigua"
+                >
+                  Login / Sign Up
+                </button>
+              )}
               <Button
                 onClick={() => {
                   setDialogOpen(true);
@@ -580,6 +735,7 @@ const Layout = ({ children }) => {
                     { title: "Contact", href: "/contact" },
                     { title: "Our Culture", href: "/our-culture" },
                     { title: "Work With Us", href: "/work-with-us" },
+                    { title: "List Your Business", href: "/apply" },
                     { title: "Submit a Story", href: "/submit-a-story" },
                     { title: "Advertise with Us", href: "/advertise-with-us" },
                     { title: "Editorial Standards", href: "/editorial-standards" },

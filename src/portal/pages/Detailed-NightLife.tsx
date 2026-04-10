@@ -1,3 +1,4 @@
+'use client'
 import React, { useState, useRef } from "react";
 import {
   Accordion,
@@ -34,6 +35,18 @@ import {
   PartyPopper,
   Moon,
 } from "lucide-react";
+import { Badge } from "@public/components/ui/badge";
+import { useListing, useNearbyListings } from "@/lib/listings.hooks";
+import { getListingImages, getListingMapSrc } from "@/portal/lib/listing-detail-utils";
+import { getNeighborhoodOptions } from "@public/data/filter-config";
+import ReviewSection from "@public/components/listings/ReviewSection";
+
+const normalizeStringArray = (value: any): string[] => {
+  if (!value) return []
+  if (Array.isArray(value)) return value.map((item) => (typeof item === 'string' ? item : item?.label || item?.name || '')).filter(Boolean)
+  if (typeof value === 'string') return value.split(',').map((item) => item.trim()).filter(Boolean)
+  return []
+}
 
 const thumbnails = [
   "https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=800",
@@ -42,69 +55,7 @@ const thumbnails = [
   "https://images.unsplash.com/photo-1574391884720-bbc3740c59d1?w=800",
 ];
 
-const sliderPlaces = [
-  { image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=500", category: "Foodie", title: "LA GRANDE – MONT ROYAL", location: "On La Nappe", rating: 4, badge: "NEW" },
-  { image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500", category: "Food", title: "THE BULL", location: "Downtown", rating: 4, badge: "NEW" },
-  { image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500", category: "Food", title: "KARAMI FUSION ASIATE...", location: "Lounge", rating: 4, badge: "NEW" },
-  { image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=500", category: "Foodie", title: "L'ETOILE DE TUNIS", location: "City Center", rating: 4, badge: "NEW" },
-  { image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500", category: "Beach", title: "PLAYA BLANCA", location: "Isla Barú", rating: 5, badge: "NEW" },
-  { image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=500", category: "Foodie", title: "L'ETOILE DE TUNIS", location: "City Center", rating: 4, badge: "NEW" },
-  { image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500", category: "Beach", title: "PLAYA BLANCA", location: "Isla Barú", rating: 5, badge: "NEW" },
-];
-
-const dealsSlides = [
-  {
-    title: "Snorkeling + Lunch Combo",
-    desc: "Full equipment, guided tour & fresh seafood lunch included. Valid till March 2025.",
-    highlight: "BOOK NOW",
-    tag: "SAVE 20%",
-
-    valid: "Valid until February 14, 2026",
-  },
-  {
-    title: "Group Discount 10% Off",
-    desc: "Book for 4+ people and get 10% off. Life jackets & transport included.",
-    highlight: "LIMITED",
-
-    valid: "Valid until February 14, 2026",
-  },
-  {
-    title: "Sunset Snorkel Package",
-    desc: "Evening snorkeling with cocktails on return. Reserve now.",
-    highlight: "POPULAR",
-    tag: "SAVE 20%",
-
-    valid: "Valid until February 14, 2026",
-  },
-  {
-    title: "Extended Stay Package",
-    desc: "Book 5 nights, get the 6th night complimentary. Includes daily breakfast and one spa treatment.",
-    tag: "SAVE 20%",
-    highlight: "LIMITED",
-    valid: "Valid until March 31, 2026",
-  },
-  {
-    title: "Romantic Escape",
-    desc: "Private beachfront dinner and champagne upon arrival.",
-    tag: "",
-    highlight: "LIMITED",
-    valid: "Valid until February 14, 2026",
-  },
-];
-
-const reviews = [
-  { name: "Diego M.", date: "Colombia - 6 months", rating: 5, text: "Knot d'Asie transforms into the best nightclub in Cartagena after dark. The DJ sets are world-class, the sound system is incredible, and the cocktail menu is creative and delicious. The rooftop bar with views over the old city walls at night is simply unforgettable. 🎵🌃", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=60", btnLabel: "Diego M." },
-  { name: "Isabelle F.", date: "France - 1 year", rating: 4, text: "Amazing venue! We booked a VIP table for my friend's birthday and the team went above and beyond. The music transitions seamlessly from salsa to electronic which is unique. The cocktails are beautifully presented. Only minor note: gets very busy after midnight so book early! 🎂🍸", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60", btnLabel: "Isabelle F." },
-  { name: "Roberto S.", date: "Argentina - 2 years", rating: 5, text: "Cartagena nightlife does not get better than this. The open-air design of the venue means you can dance under the stars which is truly magical. Live salsa performances on Thursday nights are not to be missed. The staff are friendly and professional. Highly recommend! 💃🌟", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60", btnLabel: "Roberto S." },
-];
-
-const faqData = [
-  { question: "How do I get there?", answer: "Knot d'Asie nightlife venue is located in Cartagena's Getsemaní neighbourhood. Taxis and Uber are readily available. The venue opens at 9pm and the peak hours are 11pm–3am." },
-  { question: "Is there a dress code?", answer: "Smart casual to stylish is preferred. Beachwear (flip flops, shorts) is not permitted after 10pm. We want guests to feel and look their best." },
-  { question: "Is reservation required?", answer: "Walk-ins are welcome but VIP tables and special events require advance booking. We strongly recommend booking VIP on weekends as they sell out quickly." },
-  { question: "What is the cancellation policy?", answer: "VIP table cancellations made more than 24 hours before are fully refunded. Same-day cancellations may incur a partial fee." },
-  { question: "What is the minimum age?", answer: "Entry is restricted to guests aged 18 and over. Valid photo ID is required at the door." },
-];
+const sliderPlaces = [];
 
 const tagRoutes = {
   Beaches: "/Beaches",
@@ -114,25 +65,6 @@ const tagRoutes = {
   Activities: "/Activities",
   Gastronomy: "/Gastronomy",
 };
-
-const hoursData = [
-  { day: "Monday", open: "Closed", close: "" },
-  { day: "Tuesday", open: "Closed", close: "" },
-  { day: "Wednesday", open: "9:00 pm", close: "3:00 am" },
-  { day: "Thursday", open: "9:00 pm", close: "3:00 am" },
-  { day: "Friday", open: "9:00 pm", close: "4:00 am" },
-  { day: "Saturday", open: "9:00 pm", close: "4:00 am" },
-  { day: "Sunday", open: "9:00 pm", close: "2:00 am" },
-];
-
-const specialties = [
-  { label: "World-Class DJ Sets", sub: "International & local DJs every weekend" },
-  { label: "Live Salsa Performances", sub: "Every Thursday — authentic Colombian bands" },
-  { label: "Rooftop Bar & Views", sub: "Stunning panorama of the old city walls" },
-  { label: "Signature Cocktail Bar", sub: "Caribbean-inspired craft cocktail menu" },
-  { label: "VIP Table Service", sub: "Bottle service & exclusive seating areas" },
-  { label: "Open-Air Dance Floor", sub: "Dance under the stars in the courtyard" },
-];
 
 function StarRow({ count, total = 5 }) {
   return (
@@ -185,10 +117,71 @@ function HorizontalSlider({ items }) {
   );
 }
 
-export default function NightlifeDetails() {
+export default function NightlifeDetails({ slug }: { slug?: string }) {
+  const { listing, loading, error } = useListing(slug || "")
+  const neighborhood = getNeighborhoodOptions('Music').find(
+    (n) => ((listing?.category_tags as string[]) ?? []).includes(n)
+  ) ?? '';
+  const { listings: nearbyListings } = useNearbyListings(
+    listing?.category ?? 'Music',
+    'Detailed-NightLife',
+    neighborhood,
+    slug || ''
+  );
   const [activeImg, setActiveImg] = useState(0);
   const [menuTab, setMenuTab] = useState("Wine");
   const [dealIdx, setDealIdx] = useState(0);
+
+  const listingImages = getListingImages(listing, thumbnails)
+  const heroImage = listingImages[activeImg] || thumbnails[0]
+  const heroTitle = listing?.title || "Nightlife Venue"
+  const heroBreadcrumb = listing?.category
+    ? `${listing.category} / ${listing.sub_category_id ?? "Nightlife"}`
+    : "Music / Nightlife / Club"
+  const heroCompany = listing?.company_name || listing?.title?.split(" ")?.[0] || "CARTAGENA"
+  const heroSubtitle = listing?.subtitle || ""
+  const priceFrom = listing?.price_from ?? listing?.price ?? null
+  const priceTo = listing?.price_to ?? priceFrom
+  const priceUnit = listing?.price_unit || "entry"
+  const listingDescription = listing?.description || listing?.about || listing?.details || ""
+  const deals = Array.isArray(listing?.deals) && listing.deals.length > 0 ? listing.deals : []
+  const faqs = Array.isArray(listing?.faqs) && listing.faqs.length > 0 ? listing.faqs : []
+  const hours: any[] = Array.isArray(listing?.weekly_hours) && listing.weekly_hours.length > 0
+    ? listing.weekly_hours
+    : []
+  const mapSrc = getListingMapSrc(listing)
+  const contactEmail = listing?.email || null
+  const contactWebsite = listing?.website || null
+  const contactPhone = listing?.phone || listing?.whatsapp || null
+  const listingAddress = listing?.address || ""
+  const fbUrl = listing?.facebook || "#"
+  const igUrl = listing?.instagram || "#"
+  const keyFeatures: string[] = normalizeStringArray(listing?.key_features)
+  const serviceItems: string[] = normalizeStringArray(listing?.services)
+  const amenityItems: string[] = normalizeStringArray(listing?.amenities)
+  const alsoAvailableOn = Array.isArray(listing?.also_available_on) && listing.also_available_on.length > 0
+    ? listing.also_available_on
+    : null
+  const reservationLinks = Array.isArray(listing?.reservation_links) && listing.reservation_links.length > 0
+    ? listing.reservation_links
+    : null
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-gold-light border-t-black" />
+      </div>
+    )
+  }
+
+  if (error && slug) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white flex-col gap-4">
+        <h2 className="text-xl font-bold text-gray-500">Listing not found</h2>
+        <a href="/music" className="text-gold underline">Return to Music & Nightlife</a>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-white font-sans w-full overflow-x-hidden">
@@ -201,25 +194,27 @@ export default function NightlifeDetails() {
       <div className="bg-white px-4 sm:px-6 md:px-10 lg:px-12 pt-5 md:pt-6 pb-6 md:pb-8">
         <div className="mx-auto max-w-[1200px]">
           <p className="text-[10px] md:text-xs text-gray-400 mb-3 md:mb-4 leading-none">
-            La Carta &ndash; Cartagena Culture &amp; Tourism &rsaquo; Nightlife &rsaquo; Club &rsaquo;{" "}
-            <span className="text-gray-700 font-semibold">Knot d&apos;Asie</span>
+            La Carta &ndash; Cartagena Culture &amp; Tourism &rsaquo; {heroBreadcrumb} &rsaquo;{" "}
+            <span className="text-gray-700 font-semibold">{heroTitle}</span>
           </p>
           <div className="flex flex-col lg:flex-row items-start gap-5 lg:gap-6">
             <div className="flex items-start gap-3 flex-1 min-w-0 w-full lg:p-9 md:p-9 sm:p-9">
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-black tracking-tight leading-none font-antigua">Knot d&apos;Asie</h1>
-                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-red text-white text-[10px] md:text-xs font-extrabold flex items-center justify-center shrink-0 shadow">K</span>
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-black tracking-tight leading-none font-antigua">{heroTitle}</h1>
+                  <span className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-red text-white text-[10px] md:text-xs font-extrabold flex items-center justify-center shrink-0 shadow">{heroCompany?.[0] ?? "N"}</span>
                 </div>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
-                  <p className="text-xs md:text-sm text-gray-500">Nightlife / Club / Live Music</p>
-                  <p className="text-[10px] md:text-xs font-extrabold tracking-[0.2em] text-gray-700 uppercase">KNOT D&apos;ASIE</p>
+                  <p className="text-xs md:text-sm text-gray-500">{heroBreadcrumb}</p>
+                  <p className="text-[10px] md:text-xs font-extrabold tracking-[0.2em] text-gray-700 uppercase">{heroCompany}</p>
                 </div>
-                <p className="mt-2 md:mt-6 text-sm md:text-base lg:text-[20px] text-gray-600 leading-snug font-bold">Eco-Luxury Glamping Experience in Isla Barú</p>
+                {heroSubtitle && <p className="mt-2 md:mt-6 text-sm md:text-base lg:text-[20px] text-gray-600 leading-snug font-bold">{heroSubtitle}</p>}
+                {priceFrom != null && (
                 <div className="mt-3 md:mt-6">
                   <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-gray-600 font-bold mb-0.5">Starting From</p>
-                  <p className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight font-antigua">$177 &ndash; $515 <span className="text-sm md:text-base font-normal text-gray-500">/ night</span></p>
+                  <p className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight font-antigua">${priceFrom}{priceTo && priceTo !== priceFrom ? ` – $${priceTo}` : ""} <span className="text-sm md:text-base font-normal text-gray-500">/ {priceUnit}</span></p>
                 </div>
+                )}
                 <div className="flex items-center gap-2 mt-3 md:mt-6 flex-wrap">
                   {Array(5).fill(0).map((_, i) => <Star key={i} className="w-4 h-4 md:w-5 md:h-5 fill-yellow-400 text-yellow-400" />)}
                   <span className="text-sm font-semibold cursor-pointer ml-1 text-black font-antigua">Leave Review</span>
@@ -233,11 +228,11 @@ export default function NightlifeDetails() {
             </div>
             <div className="flex items-start gap-2 md:gap-2.5 w-full lg:w-auto lg:shrink-0 mt-4 lg:mt-0">
               <div className="rounded-2xl overflow-hidden shadow-lg flex-1 lg:flex-none">
-                <div className="lg:hidden w-full"><img src={thumbnails[activeImg]} alt="Knot d'Asie Nightlife" className="w-full h-full object-cover transition-all duration-700" /></div>
-                <div className="hidden lg:block" style={{ width: "440px", height: "390px" }}><img src={thumbnails[activeImg]} alt="Knot d'Asie Nightlife" className="w-full h-full object-cover transition-all duration-700" /></div>
+                <div className="lg:hidden w-full"><img src={heroImage} alt={heroTitle} className="w-full h-full object-cover transition-all duration-700" /></div>
+                <div className="hidden lg:block" style={{ width: "440px", height: "390px" }}><img src={heroImage} alt={heroTitle} className="w-full h-full object-cover transition-all duration-700" /></div>
               </div>
               <div className="flex flex-col gap-1.5 md:gap-2 shrink-0">
-                {thumbnails.map((src, i) => (
+                {listingImages.map((src, i) => (
                   <div key={i} onClick={() => setActiveImg(i)} className={`w-14 h-16 sm:w-16 sm:h-[72px] md:w-[70px] md:h-[90px] rounded-xl overflow-hidden cursor-pointer transition-all flex-shrink-0 ${i === activeImg ? "ring-2 ring-blue-500 ring-offset-1" : "opacity-70 hover:opacity-100"}`}>
                     <img src={src} alt="" className="w-full h-full object-cover" />
                   </div>
@@ -256,30 +251,29 @@ export default function NightlifeDetails() {
 
               <div className="bg-white rounded-2xl p-4 md:p-6">
                 <p className="text-[10px] md:text-xs uppercase tracking-widest text-gray-400 font-bold mb-1">About</p>
-                <h2 className="text-xl md:text-2xl font-extrabold text-black font-antigua mb-3 md:mb-4">About Rodian Restaurants</h2>
-                <p className="text-gray-600 text-xs md:text-sm leading-relaxed">
-                  Nestled on the pristine shores of <strong className="text-black">Isla Barú</strong>, just a scenic boat ride from Cartagena's historic walls, Playa Scondida offers an unparalleled eco-luxury glamping experience. Here, the Caribbean Sea whispers secrets of ancient mariners, while the jungle canopy shelters you in its emerald embrace.
-                  <br /><br />
-                  Our philosophy: simple, authentic luxury that honors the land. Each bungalow is crafted from locally-sourced materials, designed to blend seamlessly with the surrounding nature while providing every modern comfort you desire. Wake to the calls of tropical birds, dine on freshly-caught seafood by candlelight, and fall asleep to the rhythm of gentle waves. With private docks offering direct ocean access, secluded beach coves, and immersive nature trails, Playa Scondida is more than accommodation — it is a transformation.
-                </p>
+                <h2 className="text-xl md:text-2xl font-extrabold text-black font-antigua mb-3 md:mb-4">About {heroTitle}</h2>
+                {listingDescription && (
+                  <p className="text-gray-600 text-xs md:text-sm leading-relaxed">{listingDescription}</p>
+                )}
               </div>
 
               {/* Our Specialties */}
+              {keyFeatures.length > 0 && (
               <div className="bg-white rounded-2xl p-4 md:p-6">
                 <p className="text-[10px] md:text-xs uppercase tracking-widest text-gray-400 font-bold mb-1">Our Specialties</p>
                 <h2 className="text-lg md:text-xl font-extrabold text-black font-antigua mb-3 md:mb-4">Dish by our dishes</h2>
                 <div className="space-y-2 md:space-y-3">
-                  {specialties.map((item, i) => (
+                  {keyFeatures.map((label, i) => (
                     <div key={i} className="flex items-start gap-2 md:gap-3 bg-[#f8f5e9] rounded-xl p-2.5 md:p-3 border border-amber-50">
                       <CheckCircle size={14} className="text-amber-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-black text-xs md:text-sm font-antigua">{item.label}</p>
-                        <p className="text-[10px] md:text-xs text-gray-400">{item.sub}</p>
+                        <p className="font-bold text-black text-xs md:text-sm font-antigua">{label}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Nearby Activities */}
               <div className="bg-[#f8f5e9] rounded-2xl p-4 md:p-5 border border-amber-100 shadow-sm relative">
@@ -392,10 +386,11 @@ export default function NightlifeDetails() {
                     <p className="text-xs font-bold text-black font-antigua">Visa / MC / Amex</p>
                   </div>
                 </div>
+                {hours.length > 0 && (
                 <div className="mt-3 md:mt-4 border-t border-amber-100 pt-3 md:pt-4">
                   <p className="text-[10px] md:text-xs font-bold text-black uppercase mb-2">Opening Hours</p>
                   <div className="space-y-1">
-                    {hoursData.map((row, i) => (
+                    {hours.map((row, i) => (
                       <div key={i} className={`flex items-center justify-between text-[10px] md:text-xs py-1 px-2 rounded ${i >= 4 ? "bg-amber-100 font-bold text-black" : "text-gray-600"}`}>
                         <span className="font-semibold w-24">{row.day}</span>
                         <span>{row.open}</span>
@@ -404,51 +399,53 @@ export default function NightlifeDetails() {
                     ))}
                   </div>
                 </div>
+                )}
               </div>
 
               {/* Address + Social */}
               <div className="bg-[#f8f5e9] rounded-2xl p-4 md:p-5 border border-amber-200 shadow-sm">
-                <p className="text-xs text-black uppercase font-bold mb-1">Address</p>
-                <p className="text-xs md:text-sm font-bold text-black leading-snug font-antigua">Isla Baru, Provincia de Cartagena, Bolívar, Colombia</p>
+                {listingAddress && (
+                  <>
+                    <p className="text-xs text-black uppercase font-bold mb-1">Address</p>
+                    <p className="text-xs md:text-sm font-bold text-black leading-snug font-antigua">{listingAddress}</p>
+                  </>
+                )}
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-amber-100">
                   <p className="text-[10px] text-gray-500 font-bold mr-1">Follow:</p>
-                  {[
-                    { icon: Facebook, color: "bg-blue-600" },
-                    { icon: Instagram, color: "bg-pink-500" },
-                    { icon: Youtube, color: "bg-red-500" },
-                    { icon: Globe, color: "bg-amber-500" },
-                  ].map((item, i) => (
-                    <button key={i} className={`w-7 h-7 md:w-8 md:h-8 rounded-full ${item.color} text-white flex items-center justify-center hover:opacity-80 transition`}>
-                      <item.icon size={12} />
-                    </button>
-                  ))}
+                  {fbUrl !== "#" && <a href={fbUrl} target="_blank" rel="noreferrer" className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:opacity-80 transition"><Facebook size={12} /></a>}
+                  {igUrl !== "#" && <a href={igUrl} target="_blank" rel="noreferrer" className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-pink-500 text-white flex items-center justify-center hover:opacity-80 transition"><Instagram size={12} /></a>}
+                  {contactWebsite && <a href={contactWebsite} target="_blank" rel="noreferrer" className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-amber-500 text-white flex items-center justify-center hover:opacity-80 transition"><Globe size={12} /></a>}
                 </div>
               </div>
 
               {/* 3 Contact Icons */}
               <div className="grid grid-cols-3 gap-2 md:gap-2.5">
                 {[
-                  { icon: Mail, label: "Email", sub: "info@knotdasie.com" },
-                  { icon: Globe, label: "Website", sub: "knotdasie.com" },
-                  { icon: Phone, label: "Phone", sub: "+57 315 123 4567" },
+                  { icon: Mail, label: "Email", sub: contactEmail || "Not available", href: contactEmail ? `mailto:${contactEmail}` : "#" },
+                  { icon: Globe, label: "Website", sub: contactWebsite ? contactWebsite.replace(/^https?:\/\//, "") : "Not available", href: contactWebsite || "#" },
+                  { icon: Phone, label: "Phone", sub: contactPhone || "Not available", href: contactPhone ? `tel:${contactPhone}` : "#" },
                 ].map((item, i) => (
-                  <div key={i} className="bg-[#f8f5e9] rounded-xl border border-amber-100 shadow-sm p-2 md:p-3 flex flex-col items-center text-center gap-1 cursor-pointer hover:border-amber-400 transition">
+                  <a key={i} href={item.href} target={item.href !== "#" ? "_blank" : undefined} rel="noreferrer noopener" className="bg-[#f8f5e9] rounded-xl border border-amber-100 shadow-sm p-2 md:p-3 flex flex-col items-center text-center gap-1 hover:border-amber-400 transition">
                     <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-amber-50 flex items-center justify-center"><item.icon size={14} className="text-amber-500" /></div>
                     <p className="font-bold text-[10px] md:text-xs text-black">{item.label}</p>
-                    <p className="text-[9px] md:text-[10px] text-black leading-tight font-bold">{item.sub}</p>
-                  </div>
+                    <p className="text-[9px] md:text-[10px] text-black leading-tight font-bold break-all">{item.sub}</p>
+                  </a>
                 ))}
               </div>
 
               {/* Also Available On */}
+              {alsoAvailableOn && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 md:p-4 text-center">
                 <p className="font-bold text-black text-xs md:text-sm mb-2 md:mb-3 font-antigua">Also Available On</p>
                 <div className="flex justify-center gap-2 md:gap-4 flex-wrap">
-                  <button className="bg-red-500 text-white text-[10px] md:text-xs font-bold rounded-xl px-3 md:px-5 py-2 md:py-3">TripAdvisor ↗</button>
-                  <button className="bg-orange-500 text-white text-[10px] md:text-xs font-bold rounded-xl px-3 md:px-5 py-2 md:py-3">Eventbrite ↗</button>
-                  <button className="bg-pink-500 text-white text-[10px] md:text-xs font-bold rounded-xl px-3 md:px-5 py-2 md:py-3">Instagram ↗</button>
+                  {alsoAvailableOn.map((link: any, i: number) => (
+                    <a key={i} href={link.url || link.link || "#"} target="_blank" rel="noreferrer" className="bg-gold text-white text-[10px] md:text-xs font-bold rounded-xl px-3 md:px-5 py-2 md:py-3">
+                      {link.platform || link.label || link.name} ↗
+                    </a>
+                  ))}
                 </div>
               </div>
+              )}
 
               <button className="w-full rounded-full bg-gold hover:bg-gold transition py-3 md:py-3.5 text-xs md:text-sm font-bold text-white shadow">Book with La Carta</button>
               <div className="flex items-center justify-center gap-2 text-[10px] md:text-xs text-gray-400 flex-wrap">
@@ -457,13 +454,14 @@ export default function NightlifeDetails() {
               </div>
 
               {/* Deals Slider */}
+              {deals.length > 0 && (
               <div className="bg-white rounded-2xl  relative ">
                 <div className="flex items-center justify-between  pt-3 md:pt-4 pb-1.5">
                   <p className="font-bold text-black text-xs md:text-sm font-antigua">
                     Deals &amp; Promotions
                   </p>
                   <span className="text-xs text-gold font-semibold font-antigua">
-                    {dealIdx + 1}/{dealsSlides.length}
+                    {dealIdx + 1}/{deals.length}
                   </span>
                 </div>
                 <div className=" pb-3 md:pb-4 relative ">
@@ -471,25 +469,25 @@ export default function NightlifeDetails() {
                     <div className="flex items-start justify-between gap-2 relative">
                       <div className="flex-1  space-y-3 mb-3">
                         <p className="font-bold text-black text-xs md:text-sm font-antigua">
-                          {dealsSlides[dealIdx].title}
+                        {deals[dealIdx]?.title}
                         </p>
                         <p className="text-[10px] md:text-xs text-gray-500 mt-1 leading-relaxed">
-                          {dealsSlides[dealIdx].desc}
+                          {deals[dealIdx]?.desc}
                         </p>
                       </div>
                       {/* <span className="bg-gold text-white text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded shrink-0">
-                        {dealsSlides[dealIdx].tag}
+                        {deals[dealIdx].tag}
                       </span> */}
                     </div>
-                    {dealsSlides[dealIdx].tag && (
+                    {deals[dealIdx]?.tag && (
                       <Badge className="absolute top-0 right-0 border-0 bg-gradient-to-r from-gold-light to-gold overflow-hidden text-white  rounded-xl rounded-tl-none rounded-br-none  text-xs">
-                        {dealsSlides[dealIdx].tag}
+                        {deals[dealIdx].tag}
                       </Badge>
                     )}
                     <div className="mt-auto flex items-center justify-between text-[10px] md:text-xs ">
                       <div className="flex items-center gap-2 text-gray-500">
                         <Calendar className="w-3 h-3" />
-                        {dealsSlides[dealIdx].valid}
+                        {deals[dealIdx].valid}
                       </div>
 
                       <button className="text-[#c89b2c] font-semibold flex items-center gap-2">
@@ -500,7 +498,7 @@ export default function NightlifeDetails() {
                       onClick={() =>
                         setDealIdx(
                           (p) =>
-                            (p - 1 + dealsSlides.length) % dealsSlides.length,
+                            (p - 1 + deals.length) % deals.length,
                         )
                       }
                       className="absolute z-16 -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-l from-gold to-gold-light text-white flex items-center justify-center shadow"
@@ -510,7 +508,7 @@ export default function NightlifeDetails() {
 
                     <button
                       onClick={() =>
-                        setDealIdx((p) => (p + 1) % dealsSlides.length)
+                        setDealIdx((p) => (p + 1) % deals.length)
                       }
                       className="absolute z-16 -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-r from-gold to-gold-light text-white flex items-center justify-center shadow"
                     >
@@ -520,7 +518,7 @@ export default function NightlifeDetails() {
                       onClick={() =>
                         setDealIdx(
                           (p) =>
-                            (p - 1 + dealsSlides.length) % dealsSlides.length,
+                            (p - 1 + deals.length) % deals.length,
                         )
                       }
                       className="absolute  md:left-2 top-1/2 -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-l from-gold to-gold-light text-white flex items-center justify-center"
@@ -529,7 +527,7 @@ export default function NightlifeDetails() {
                     </button>
                     <button
                       onClick={() =>
-                        setDealIdx((p) => (p + 1) % dealsSlides.length)
+                        setDealIdx((p) => (p + 1) % deals.length)
                       }
                       className="absolute  md:right-2 top-1/2   -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-r from-gold to-gold-light text-white flex items-center justify-center"
                     >
@@ -543,7 +541,7 @@ export default function NightlifeDetails() {
                   </div>
                 </div>
                 <div className="flex justify-center gap-1.5 pb-2.5 md:pb-3">
-                  {dealsSlides.map((_, i) => (
+                  {deals.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => setDealIdx(i)}
@@ -552,6 +550,7 @@ export default function NightlifeDetails() {
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Powered By */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 md:p-4">
@@ -578,8 +577,13 @@ export default function NightlifeDetails() {
             <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold font-antigua text-black">Location &amp; Getting There</h2>
           </div>
           <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-200 h-[220px] sm:h-[280px] md:h-[320px]">
-            <iframe title="Location Map" className="w-full h-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=Getsemani+Cartagena+Colombia&output=embed" />
+            <iframe title="Location Map" className="w-full h-full border-0" loading="lazy" allowFullScreen src={mapSrc} />
           </div>
+          {listing?.address && (
+            <p className="mt-3 text-sm text-gray-600 flex items-center gap-2 font-medium">
+              <MapPin size={16} className="text-gold" /> {listing.address}
+            </p>
+          )}
         </div>
       </div>
 
@@ -590,20 +594,19 @@ export default function NightlifeDetails() {
             <p className="text-[10px] md:text-xs uppercase tracking-widest font-bold text-gray-400 mb-1">What's Included</p>
             <h2 className="text-xl md:text-2xl font-extrabold text-black font-antigua">Services &amp; Amenities</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            {[
-              { title: "Services & Amenities", items: [{ icon: GlassWater, label: "Full bar service" }, { icon: Music, label: "Professional DJ" }, { icon: Users, label: "VIP lounge" }, { icon: Camera, label: "Photo booth" }, { icon: Sparkles, label: "Bottle service" }] },
-              { title: "Music", items: [{ icon: Music, label: "Salsa / Reggaeton" }, { icon: Volume2, label: "House / Electronic" }, { icon: Mic2, label: "Live performances" }] },
-              { title: "Drinks", items: [{ icon: Wine, label: "Craft cocktails" }, { icon: GlassWater, label: "Premium spirits" }, { icon: Sparkles, label: "Champagne tower" }] },
-              { title: "Atmosphere", items: [{ icon: Moon, label: "Rooftop open-air" }, { icon: Zap, label: "LED light shows" }, { icon: Globe, label: "Old city views" }, { icon: PartyPopper, label: "Event theming" }] },
-            ].map((col, ci) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
+            {([
+              { title: "Key Features", items: keyFeatures, icon: Sparkles },
+              { title: "Services", items: serviceItems, icon: GlassWater },
+              { title: "Amenities", items: amenityItems, icon: Music },
+            ].filter(col => col.items.length > 0) as Array<{ title: string; items: string[]; icon: any }>).map((col, ci) => (
               <div key={ci}>
                 <h3 className="font-bold text-black text-sm md:text-base mb-3 md:mb-4 pb-2 border-b-2 border-gray-300">{col.title}</h3>
                 <div className="space-y-3 md:space-y-3.5">
-                  {col.items.map((item, i) => (
+                  {col.items.map((label, i) => (
                     <div key={i} className="flex items-start gap-2 md:gap-3">
-                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-xl bg-amber-50 flex items-center justify-center shrink-0"><item.icon size={13} className="text-amber-500" /></div>
-                      <p className="font-semibold text-gray-900 text-xs md:text-sm pt-1">{item.label}</p>
+                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-xl bg-amber-50 flex items-center justify-center shrink-0"><col.icon size={13} className="text-amber-500" /></div>
+                      <p className="font-semibold text-gray-900 text-xs md:text-sm pt-1">{label}</p>
                     </div>
                   ))}
                 </div>
@@ -616,21 +619,26 @@ export default function NightlifeDetails() {
       {/* AROUND THIS PLACE */}
       <div className="px-4 sm:px-6 md:px-10 lg:px-12 pb-6 md:pb-8">
         <div className="mx-auto max-w-[1200px]">
-          <div className="flex items-end justify-between mb-4 md:mb-5">
-            <div>
-              <p className="text-[10px] md:text-xs uppercase tracking-widest font-bold text-gray-400 mb-0.5">Explore</p>
-              <h2 className="text-xl md:text-2xl font-extrabold font-antigua text-black">Around This Place</h2>
-            </div>
-            <div className="flex gap-1.5 md:gap-2">
-              <button className="bg-red text-white text-[10px] md:text-xs font-bold rounded-full px-3 md:px-4 py-1.5 md:py-2">Clear Filters</button>
-              <button className="bg-green text-white text-[10px] md:text-xs font-bold rounded-full px-3 md:px-4 py-1.5 md:py-2">+ Filters</button>
-            </div>
+          <div className="w-full mb-4 md:mb-5">
+            <p className="text-[10px] md:text-xs uppercase w-full text-center tracking-widest font-bold text-gray-400 mb-0.5">Explore</p>
+            <h2 className="text-xl md:text-2xl font-extrabold text-center font-antigua text-black">Around This Place</h2>
           </div>
-          <HorizontalSlider items={sliderPlaces} />
+          {nearbyListings.length > 0 ? (
+            <HorizontalSlider items={nearbyListings.map(l => ({ image: l.image, category: l.category, title: l.title, subtitle: l.subtitle, rating: l.rating, href: l.href }))} />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-black/50 gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              </svg>
+              <p className="text-sm font-medium">No listings found in this neighbourhood yet.</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* FAQ */}
+      {faqs.length > 0 && (
       <div className="bg-[#fbf7ef] py-8 md:py-12 px-4 sm:px-6 md:px-10 lg:px-12">
         <div className="mx-auto max-w-[950px]">
           <div className="text-center mb-6 md:mb-8">
@@ -638,99 +646,18 @@ export default function NightlifeDetails() {
             <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-black">Frequently Asked</h2>
           </div>
           <Accordion type="single" collapsible className="space-y-2 md:space-y-3">
-            {faqData.map((item, i) => (
+            {faqs.map((item, i) => (
               <AccordionItem key={i} value={`faq-${i}`} className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 md:px-5">
                 <AccordionTrigger className="text-left text-xs md:text-sm font-semibold text-black hover:no-underline py-3 md:py-4">{item.question}</AccordionTrigger>
                 <AccordionContent className="text-xs md:text-sm text-gray-500 leading-relaxed pb-3 md:pb-4">{item.answer}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
-          <div className="mt-5 md:mt-6 space-y-2 md:space-y-3">
-            <nav className="hidden sm:grid grid-cols-3 md:grid-cols-6 gap-1.5 md:gap-2">
-              {Object.keys(tagRoutes).map((tag) => (
-                <Link key={tag} href={tagRoutes[tag]}><button className="w-full bg-white text-black font-bold shadow text-[10px] md:text-xs py-1.5 md:py-2 rounded hover:bg-gray-50 transition border border-gray-100">{tag}</button></Link>
-              ))}
-            </nav>
-            <div className="flex bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-              <input className="flex-grow px-3 md:px-4 py-2.5 md:py-3 bg-white text-black outline-none text-xs md:text-sm" type="text" placeholder="Search for Anything" />
-              <button className="bg-gold hover:bg-gold transition text-white font-bold px-4 md:px-6 py-2.5 md:py-3 text-xs md:text-sm">Search</button>
-            </div>
-          </div>
         </div>
       </div>
+      )}
 
-      {/* REVIEWS */}
-      <div className="bg-[#fbf7ef] py-6 md:py-8 px-4 sm:px-6 md:px-10 lg:px-12">
-        <div className="mx-auto max-w-[1200px]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5 mb-5 md:mb-7">
-            <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
-              <p className="font-bold text-black text-xs md:text-sm mb-2 md:mb-3">La Carta Team Reviews</p>
-              <div className="space-y-1.5 md:space-y-2">
-                {[{ label: "Price", rating: 3 }, { label: "Location", rating: 5 }, { label: "Ambiance", rating: 5 }, { label: "Services", rating: 4 }].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="text-[10px] md:text-xs text-gray-500 w-14 md:w-16 shrink-0">{item.label}</span>
-                    <StarRow count={item.rating} />
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 md:gap-3 mt-3 md:mt-4 pt-2.5 md:pt-3 border-t border-gray-100">
-                <div className="font-extrabold text-lg md:text-xl font-antigua">LA C<span className="text-amber-500">Ā</span>RTA</div>
-                <div>
-                  <p className="text-[10px] md:text-xs text-gray-400">⭐ Star Resper</p>
-                  <p className="text-[10px] md:text-xs text-gray-400">Last visit</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center min-h-[140px]">
-              <p className="text-[10px] md:text-xs uppercase tracking-widest text-black font-bold mb-1">Feedback</p>
-              <h3 className="text-2xl md:text-3xl font-extrabold font-antigua text-black">Client Say's</h3>
-              <div className="flex items-center gap-1.5 mt-2 justify-center">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <p className="text-xs md:text-sm font-bold text-gray-700">4.8 out of 5 — Based on 124 reviews</p>
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col justify-between sm:col-span-2 md:col-span-1">
-              <div className="flex items-start gap-3">
-                <p className="text-4xl md:text-5xl font-extrabold text-black leading-none">5.3</p>
-                <div className="flex-1 space-y-1 md:space-y-1.5 mt-1">
-                  {[90, 75, 50, 30, 15].map((w, i) => (
-                    <div key={i} className="h-1.5 md:h-2 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full rounded-full bg-amber-400" style={{ width: `${w}%` }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <p className="text-[10px] md:text-xs text-gray-400 mt-2">out of rating</p>
-              <button className="mt-2.5 md:mt-3 w-full bg-green text-white text-[10px] md:text-xs font-bold rounded-full py-2 md:py-2.5">+ Give Your Review</button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between mb-4 md:mb-5">
-            <button className="bg-gold text-white text-[10px] md:text-xs font-bold rounded-full px-3 md:px-4 py-1.5 md:py-2">Filter</button>
-            <p className="text-[10px] md:text-xs text-gray-400">Showing 1-10 reviews</p>
-          </div>
-          <div className="space-y-3 md:space-y-4">
-            {reviews.map((r, i) => (
-              <div key={i} className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100">
-                <div className="flex items-start justify-between gap-3 md:gap-4 mb-2 md:mb-3">
-                  <div>
-                    <h4 className="font-extrabold text-black text-sm md:text-base">{r.name}</h4>
-                    <p className="text-[10px] md:text-xs text-gray-400">{r.date}</p>
-                  </div>
-                  <StarRow count={r.rating} />
-                </div>
-                <p className="text-xs md:text-sm text-gray-600 leading-relaxed">{r.text}</p>
-                <div className="flex items-center justify-between mt-3 md:mt-4 flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <img src={r.avatar} alt="" className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover" />
-                    <span className="text-[10px] md:text-xs text-gray-500">{r.date}</span>
-                  </div>
-                  <button className="border border-red-300 text-red-500 text-[10px] md:text-xs font-bold rounded-full px-3 md:px-4 py-1 md:py-1.5 hover:bg-red-50 transition">{r.btnLabel}</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <ReviewSection listingId={listing?.id ?? ''} />
 
       {/* PREMIUM LISTING */}
       <div className="bg-[#fbf7ef] py-6 md:py-8 px-4 sm:px-6 md:px-10 lg:px-12">

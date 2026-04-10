@@ -13,25 +13,9 @@ interface AuthState {
   logout: () => void
 }
 
-// TODO: Remove DEV_USER when Supabase connection is restored
-const DEV_USER: AuthSession = process.env.NODE_ENV === 'development'
-  ? {
-      user: {
-        accountNo: 'dev-bypass',
-        email: 'dev@local.com',
-        name: 'Dev User',
-        bio: '',
-        profile_photo_url: '',
-        role: ['owner'],
-        exp: Date.now() + 86_400_000,
-      },
-      accessToken: 'dev-token',
-    }
-  : null!
-
 export const useAuthStore = create<AuthState>((set, get) => {
   const cookie = getCookie(AUTH_COOKIE)
-  const initial = cookie ? JSON.parse(cookie) : (process.env.NODE_ENV === 'development' ? DEV_USER : null)
+  const initial = cookie ? JSON.parse(cookie) : null
 
   return {
     user: initial?.user ?? null,

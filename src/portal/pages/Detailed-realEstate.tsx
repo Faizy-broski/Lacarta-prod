@@ -44,6 +44,9 @@ import {
   SlidersHorizontal,
   AlignJustify,
 } from "lucide-react";
+import { useListing, useNearbyListings } from "@/lib/listings.hooks";
+import { getListingImages, getListingMapSrc } from "@/portal/lib/listing-detail-utils";
+import { getNeighborhoodOptions } from "@public/data/filter-config";
 import {
   Card,
   CardContent,
@@ -63,20 +66,13 @@ import {
 import { Checkbox } from "@public/components/ui/checkbox";
 import { Label } from "@public/components/ui/label";
 import { Button } from "@public/components/ui/button";
-import dynamic from "next/dynamic";
-
-const MapContainer = dynamic(() => import("react-leaflet").then(m => m.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import("react-leaflet").then(m => m.TileLayer), { ssr: false });
-const Marker = dynamic(() => import("react-leaflet").then(m => m.Marker), { ssr: false });
-const Popup = dynamic(() => import("react-leaflet").then(m => m.Popup), { ssr: false });
-
 const position: [number, number] = [45.558, -73.712];
 
 const locations = [
   {
     id: 1,
-    name: "Market habitats locatifs",
-    price: "$1,653 per month",
+    name: "Nearby listing",
+    price: "Contact for price",
     position: [45.558, -73.712],
   },
 ];
@@ -97,111 +93,6 @@ const thumbImages = [
   "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=200",
 ];
 
-const nearbyProjects = [
-  {
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=600",
-    title: "HOUSE FOR RENT IN MANGA",
-    type: "House for Rent",
-    garage: "Garage",
-    beds: 3,
-    baths: 2,
-    price: "$4.00/month",
-    rating: 3.5,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600",
-    title: "HOUSE FOR RENT IN MANGA",
-    type: "House for Rent",
-    garage: "Garage",
-    beds: 3,
-    baths: 2,
-    price: "$4.00/month",
-    rating: 3.5,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=600",
-    title: "HOUSE FOR RENT IN MANGA",
-    type: "House for Rent",
-    garage: "Garage",
-    beds: 3,
-    baths: 2,
-    price: "$4.00/month",
-    rating: 3.5,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600",
-    title: "HOUSE FOR RENT IN MANGA",
-    type: "House for Rent",
-    garage: "Garage",
-    beds: 3,
-    baths: 2,
-    price: "$4.00/month",
-    rating: 3.5,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1576941089067-2de3c901e126?w=600",
-    title: "HOUSE FOR RENT IN MANGA",
-    type: "House for Rent",
-    garage: "Garage",
-    beds: 3,
-    baths: 2,
-    price: "$4.00/month",
-    rating: 3.5,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=600",
-    title: "HOUSE FOR RENT IN MANGA",
-    type: "House for Rent",
-    garage: "Garage",
-    beds: 3,
-    baths: 2,
-    price: "$4.00/month",
-    rating: 3.5,
-  },
-];
-
-const alsoSeenProjects = [
-  {
-    image: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=500",
-    title: "La Royan",
-    sub: "House for Rent Rights",
-    type: "House for Rent",
-    beds: 2,
-    baths: 2,
-    price: "$1,262",
-    rating: 4,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=500",
-    title: "Espace Lévesque Ouest",
-    sub: "House for Rent",
-    type: "House for Sale",
-    beds: 3,
-    baths: 2,
-    price: "$880",
-    rating: 4,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=500",
-    title: "La Jannea",
-    sub: "House for Sale",
-    type: "Condo for Sale",
-    beds: 3,
-    baths: 3,
-    price: "$1,200",
-    rating: 4,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=500",
-    title: "Les Tours Saint-Martin",
-    sub: "House for Rent",
-    type: "House for Rent",
-    beds: 2,
-    baths: 2,
-    price: "$680",
-    rating: 4,
-  },
-];
 
 const features = [
   { icon: Wind, label: "Air Conditioning" },
@@ -293,7 +184,17 @@ function PropertyCard({ item }) {
   );
 }
 
-export default function RealEstateDetails() {
+export default function RealEstateDetails({ slug }: { slug?: string }) {
+  const { listing, loading, error } = useListing(slug || "");
+  const neighborhood = getNeighborhoodOptions('Real Estate').find(
+    (n) => ((listing?.category_tags as string[]) ?? []).includes(n)
+  ) ?? '';
+  const { listings: nearbyListings } = useNearbyListings(
+    listing?.category ?? 'Real Estate',
+    'Detailed-RealEstate',
+    neighborhood,
+    slug || ''
+  );
   const [activeImg, setActiveImg] = useState(0);
   const [formData, setFormData] = useState({
     name: "",
@@ -313,13 +214,123 @@ export default function RealEstateDetails() {
     });
   };
 
-  const markerRef = useRef<any>(null);
+  const listingImages = getListingImages(listing, heroImages);
+  const heroImage = listingImages[activeImg] || heroImages[0];
+  const heroTitle = listing?.title || "Real estate listing";
+  const heroBreadcrumb = listing?.category
+    ? `Real Estate / ${listing.category}`
+    : "Real Estate / Property";
+  const heroCompany = listing?.company_name || listing?.title?.split(" ")?.[0] || "Real Estate";
+  const heroSubtitle = listing?.subtitle || listing?.category || "Property for rent";
+  const priceFrom = listing?.price_from ?? listing?.price ?? listing?.starting_price ?? null;
+  const priceTo = listing?.price_to ?? priceFrom;
+  const priceUnit = listing?.price_unit || "month";
+  const rating = listing?.rating ? Number(listing.rating) : null;
+  const ratingLabel = rating ? `${rating.toFixed(2)}/5` : null;
+  const bedrooms = listing?.bedrooms ?? listing?.beds ?? null;
+  const bathrooms = listing?.bathrooms ?? listing?.baths ?? null;
+  const squareFeet = listing?.sqft ?? listing?.size ?? listing?.area ?? listing?.square_feet ?? null;
+  const address = listing?.address || listing?.location || "Property address not available";
+  const propertyType = listing?.category || "Real estate";
+  const description =
+    listing?.description ||
+    listing?.about ||
+    listing?.details ||
+    "This real estate listing provides key features and amenities to make your next move easier. Contact the agent for the latest availability and pricing.";
+  const mapPosition =
+    listing?.latitude && listing?.longitude
+      ? [Number(listing.latitude), Number(listing.longitude)]
+      : position;
+  const mapSrc = getListingMapSrc(listing);
+  const contactCards = [
+    {
+      icon: Phone,
+      label: "Phone",
+      sub: listing?.phone || listing?.whatsapp || "Not available",
+      href: listing?.phone
+        ? `tel:${listing.phone}`
+        : listing?.whatsapp
+        ? `https://wa.me/${String(listing.whatsapp).replace(/\D/g, "")}`
+        : "#",
+    },
+    {
+      icon: Mail,
+      label: "Email",
+      sub: listing?.email || "Not available",
+      href: listing?.email ? `mailto:${listing.email}` : "#",
+    },
+    {
+      icon: Globe,
+      label: "Website",
+      sub: listing?.website ? listing.website.replace(/^https?:\/\//, "") : "Not available",
+      href: listing?.website || "#",
+    },
+  ];
 
-  useEffect(() => {
-    if (markerRef.current) {
-      markerRef.current.openPopup();
-    }
-  }, []);
+  // Rich content fields
+  const developerInfo = listing?.developer_info
+    ? typeof listing.developer_info === "string"
+      ? JSON.parse(listing.developer_info)
+      : listing.developer_info
+    : null;
+
+  const normalize = (arr: any[]) =>
+    arr.map((a: any) => (typeof a === "string" ? a : a?.label || a?.name || "")).filter(Boolean)
+
+  const keyFeatureItems: string[] = Array.isArray(listing?.key_features) ? normalize(listing.key_features) : []
+  const amenityItems: string[]    = Array.isArray(listing?.amenities)    ? normalize(listing.amenities)    : []
+  // Combined for the "Features & Amenities" accordion — deduplicated
+  const amenities: string[] = [...new Set([...keyFeatureItems, ...amenityItems])]
+
+  const faqs: Array<{ question: string; answer: string }> =
+    Array.isArray(listing?.faqs) && listing.faqs.length > 0
+      ? listing.faqs
+      : [];
+
+  const unitSpecs: string = listing?.unit_specs || "";
+  const availabilityStatus: string = listing?.availability_status || listing?.status || "";
+
+  // Similar listings mapped to PropertyCard shape
+  const nearbyCards = (nearbyListings ?? []).slice(0, 6).map((l) => ({
+    image: l.image || heroImages[0],
+    title: l.title,
+    type: l.category || "Real Estate",
+    garage: "",
+    beds: (l as any).bedrooms ?? null,
+    baths: (l as any).bathrooms ?? null,
+    price: (l as any).price_from ? `$${(l as any).price_from}` : "Contact for price",
+    rating: l.rating ?? 0,
+    href: l.href,
+  }));
+
+  const alsoSeenCards = (nearbyListings ?? []).slice(0, 4).map((l) => ({
+    image: l.image || heroImages[0],
+    title: l.title,
+    sub: l.subtitle || l.category || "",
+    type: l.category || "Real Estate",
+    beds: (l as any).bedrooms ?? null,
+    baths: (l as any).bathrooms ?? null,
+    price: (l as any).price_from ? `$${(l as any).price_from}` : "Contact for price",
+    rating: l.rating ?? 0,
+    href: l.href,
+  }));
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-gold-light border-t-black" />
+      </div>
+    );
+  }
+
+  if (error && slug) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white flex-col gap-4">
+        <h2 className="text-xl font-bold text-gray-500">Listing not found</h2>
+        <a href="/real-estate" className="text-gold underline">Return to Real Estate</a>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white font-sans w-full overflow-x-hidden">
@@ -386,9 +397,9 @@ export default function RealEstateDetails() {
               href="/real-estate"
               className="hover:text-amber-500 text-sky-500 transition"
             >
-              Real Estate / Listing
+              Real Estate
             </Link>{" "}
-            / <span className="text-gray-400">Market habitats locatifs</span>
+            / <span className="text-gray-400">{heroTitle}</span>
           </p>
           <Link
             href="/real-estate"
@@ -398,12 +409,11 @@ export default function RealEstateDetails() {
           </Link>
           <div className="flex items-center justify-between gap-3 md:gap-5 flex-wrap">
             {[
-              { icon: Building2, label: "Unavailable" },
-              { icon: Bath, label: "2 Baths" },
-              { icon: BedDouble, label: "2 Bedrooms" },
-              { icon: BedDouble, label: "3 Bedrooms" },
-              { icon: SquareCode, label: "1023 Sq. Ft." },
-            ].map((item, i) => (
+              { icon: Building2, label: availabilityStatus || listing?.status || "Available" },
+              bathrooms != null ? { icon: Bath, label: `${bathrooms} Bath${bathrooms !== 1 ? "s" : ""}` } : null,
+              bedrooms != null ? { icon: BedDouble, label: `${bedrooms} Bedroom${bedrooms !== 1 ? "s" : ""}` } : null,
+              squareFeet != null ? { icon: SquareCode, label: `${squareFeet} Sq. Ft.` } : null,
+            ].filter(Boolean).map((item, i) => (
               <div
                 key={i}
                 className="flex items-center justify-center gap-2 text-md text-gray-600 font-semibold"
@@ -415,7 +425,7 @@ export default function RealEstateDetails() {
           </div>
           <p className="text-md text-gray-600 mt-3 flex items-center gap-2 font-semibold">
             <MapPin className="text-gold-light h-5 w-5" />
-            Cartagena, Cartagena Province, Bolivar, Colombia Sq. Ft.
+            {address}
           </p>
         </div>
       </div>
@@ -425,14 +435,14 @@ export default function RealEstateDetails() {
         <div className="container mx-auto max-w-[1100px] py-6 border border-gray-200 rounded-lg shadow">
           <div className="relative rounded-2xl overflow-hidden shadow-md h-[240px] sm:h-[320px] md:h-[420px] lg:h-[470px]">
             <img
-              src={heroImages[activeImg]}
-              alt="Property"
+              src={heroImage}
+              alt={heroTitle}
               className="w-full h-full object-cover transition-all duration-700"
             />
             <button
               onClick={() =>
                 setActiveImg(
-                  (p) => (p - 1 + heroImages.length) % heroImages.length,
+                  (p) => (p - 1 + listingImages.length) % listingImages.length,
                 )
               }
               className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow hover:bg-white transition"
@@ -440,13 +450,13 @@ export default function RealEstateDetails() {
               <ChevronLeft size={16} />
             </button>
             <button
-              onClick={() => setActiveImg((p) => (p + 1) % heroImages.length)}
+              onClick={() => setActiveImg((p) => (p + 1) % listingImages.length)}
               className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow hover:bg-white transition"
             >
               <ChevronRight size={16} />
             </button>
             <div className="absolute bottom-3 left-3 bg-white/90  text-sm  px-2.5 py-1 rounded-lg backdrop-blur-sm">
-              {activeImg + 1} / {heroImages.length}
+              {activeImg + 1} / {listingImages.length}
             </div>
             <button className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-sm  px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-white transition shadow">
               <Expand className="w-4 h-4" /> View All
@@ -456,7 +466,7 @@ export default function RealEstateDetails() {
             className="flex gap-2 mt-2.5 overflow-x-auto p-1"
             style={{ scrollbarWidth: "none" }}
           >
-            {thumbImages.map((src, i) => (
+            {listingImages.map((src, i) => (
               <div
                 key={i}
                 onClick={() => setActiveImg(i)}
@@ -472,31 +482,37 @@ export default function RealEstateDetails() {
             <div className="flex-1">
               {/* title */}
               <h2 className="text-3xl md:text-4xl font-antigua font-extrabold text-black leading-tight">
-                Market habitats locatifs
+                {heroTitle}
               </h2>
 
               {/* rating */}
+              {rating != null && (
               <div className="flex items-center gap-2 mt-2">
-                <StarRow count={3.5} />
-                <span className="text-sm text-gray-500">3.67/5 (6 VOTES)</span>
-                <button className="text-sm text-gray-600 underline">
-                  Vote
-                </button>
+                <StarRow count={Math.round(rating)} />
+                <span className="text-sm text-gray-500">{ratingLabel}{listing?.reviews_count ? ` (${listing.reviews_count} VOTES)` : ""}</span>
+                <button className="text-sm text-gray-600 underline">Vote</button>
               </div>
+              )}
 
               {/* category */}
-              <p className="text-gray-500 mt-4 text-base">Condos for rent</p>
+              <p className="text-gray-500 mt-4 text-base">{heroSubtitle}</p>
 
               {/* price */}
+              {priceFrom != null && (
               <p className="text-base md:text-base font-bold text-black mt-1">
-                Starting at $1,653 per month
+                Starting at ${priceFrom}{priceTo && priceTo !== priceFrom ? ` – $${priceTo}` : ""} per {priceUnit}
               </p>
+              )}
 
               {/* features */}
+              {(bedrooms != null || bathrooms != null || squareFeet != null) && (
               <ul className="mt-4 space-y-1 text-gray-500 text-sm">
-                <li>• Studios, 1 to 3 bedrooms</li>
-                <li>• Move-in-ready</li>
+                {bedrooms != null && <li>• {bedrooms} bedroom{bedrooms !== 1 ? "s" : ""}</li>}
+                {bathrooms != null && <li>• {bathrooms} bathroom{bathrooms !== 1 ? "s" : ""}</li>}
+                {squareFeet != null && <li>• {squareFeet} Sq. Ft.</li>}
+                {unitSpecs && <li>• {unitSpecs}</li>}
               </ul>
+              )}
             </div>
 
             {/* HEART BUTTON */}
@@ -514,25 +530,21 @@ export default function RealEstateDetails() {
             {/* LEFT */}
             <div className="space-y-4 min-w-0">
               <div className="flex items-start gap-3">
+                {(listing?.feature_logo || listing?.cover_image) && (
                 <img
-                  src={
-                    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200"
-                  }
-                  className="w-14 h-14 rounded-lg object-cover"
+                  src={listing.feature_logo || listing.cover_image}
+                  className="w-14 h-14 rounded-lg object-cover shrink-0"
+                  alt={heroTitle}
                 />
+                )}
 
                 <div>
                   <p className="font-bold text-black text-sm md:text-base">
-                    Market rental habitats
+                    {heroCompany}
                   </p>
 
                   <p className="text-xs md:text-sm text-gray-500 mt-1 leading-relaxed">
-                    Market rental habitats offer a multitude of advantages to
-                    their residents, thanks to a prime location in the heart of
-                    Chomedey, Laval. The 3 rental phases feature a wide
-                    selection of all-inclusive units equipped with high-end
-                    finishes and generous full-height windows that flood the
-                    spaces with natural light.
+                    {description}
                   </p>
                 </div>
               </div>
@@ -540,102 +552,15 @@ export default function RealEstateDetails() {
               <p className="text-sm text-gray-600 mt-3 cursor-pointer">
                 Full description here +
               </p>
-              {/* <div className="flex items-start gap-3 bg-gray-50 rounded-2xl p-3 md:p-4 border border-gray-100">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                  <Building2 size={18} className="text-amber-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-extrabold text-black text-sm md:text-base font-antigua">
-                    Market rental habitats
-                  </p>
-                  <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 leading-relaxed">
-                    Market habitats locatifs offers a full range of advantages
-                    to rental residents. It features a prime location in the
-                    heart of Cartagena. The 2 similar phases feature a wide
-                    selection of an inclusive set, equipped with high-end
-                    amenities within an urban eco-logic. Alright residents can
-                    find the balance without cost of light.
-                  </p>
-                </div>
-              </div> */}
-
-              {/* <Accordion type="single" collapsible className="mt-4">
-                {[
-                  "Contact details and website for this project",
-                  "Real estate developer(s)",
-                  "Address",
-                  "Features",
-                  "User comment(s) (0)",
-                  "Blog posts related to this project",
-                ].map((label, i) => (
-                  <AccordionItem
-                    key={i}
-                    value={`item-${i}`}
-                    className="border-b border-gray-200"
-                  >
-                    <AccordionTrigger className="py-4 text-sm text-start font-semibold text-gray-700 hover:no-underline">
-                      {label}
-                    </AccordionTrigger>
-
-                    <AccordionContent className="pb-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                        {features.map((item, i) => (
-                          <div
-                            key={i}
-                            className="bg-gray-100 rounded-lg p-5 flex flex-col items-center justify-center gap-2"
-                          >
-                            <item.icon size={22} className="text-gray-500" />
-                            <p className="text-xs text-gray-600 text-center">
-                              {item.label}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion> */}
 
               <Accordion type="single" collapsible className="space-y-2">
                 {[
-                  // {
-                  //   value: "desc",
-                  //   label: "Full description below",
-                  //   content: (
-                  //     <p className="text-xs text-gray-500 leading-relaxed pb-3">
-                  //       Market habitats locatifs is a premium residential
-                  //       development offering a curated selection of rental units
-                  //       in one of Cartagena's most sought-after neighbourhoods.
-                  //       Each unit is designed with contemporary finishes,
-                  //       open-plan layouts, and floor-to-ceiling windows offering
-                  //       stunning city and bay views. The development offers a
-                  //       full suite of amenities including concierge, rooftop
-                  //       pool, fitness centre, and secure underground parking.
-                  //     </p>
-                  //   ),
-                  // },
                   {
                     value: "contact-info",
                     label: "Contact details and website for this project",
                     content: (
                       <div className="grid sm:grid-cols-2 gap-3 pb-4">
-                        {[
-                          {
-                            icon: Phone,
-                            label: "Phone",
-                            val: "+57 315 123 4567",
-                          },
-                          {
-                            icon: Mail,
-                            label: "Email",
-                            val: "info@markethabitats.co",
-                          },
-                          {
-                            icon: Globe,
-                            label: "Website",
-                            val: "markethabitats.co",
-                          },
-                        ].map((item, i) => (
+                        {contactCards.map((item, i) => (
                           <div
                             key={i}
                             className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2"
@@ -649,39 +574,12 @@ export default function RealEstateDetails() {
                               <p className="font-semibold text-gray-700">
                                 {item.label}
                               </p>
-                              <p className="text-gray-500">{item.val}</p>
+                              <p className="text-gray-500">{item.sub}</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ),
-                    // content: (
-                    //   <div className="space-y-2 pb-3">
-                    //     {[
-                    //       {
-                    //         icon: Phone,
-                    //         label: "Phone",
-                    //         val: "+57 315 123 4567",
-                    //       },
-                    //       {
-                    //         icon: Mail,
-                    //         label: "Email",
-                    //         val: "info@markethabitats.co",
-                    //       },
-                    //       {
-                    //         icon: Globe,
-                    //         label: "Website",
-                    //         val: "markethabitats.co",
-                    //       },
-                    //     ].map((item, i) => (
-                    //       <div
-                    //         key={i}
-                    //         className="flex items-center gap-2.5 text-xs"
-                    //       >
-                    //         <item.icon
-                    //           size={12}
-                    //           className="text-amber-500 shrink-0"
-                    //         />
                     //         <span className="font-semibold text-gray-700">
                     //           {item.label}:
                     //         </span>
@@ -691,49 +589,24 @@ export default function RealEstateDetails() {
                     //   </div>
                     // ),
                   },
-                  {
+                  ...(developerInfo ? [{
                     value: "developer",
                     label: "Real estate developer(s)",
                     content: (
                       <div className="flex items-center gap-4 bg-gray-50 rounded-xl p-4 mb-4">
-                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                           <Building2 size={20} className="text-gray-600" />
                         </div>
-
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900">
-                            Market Habitats Group
-                          </p>
-
-                          <p className="text-sm text-gray-500">
-                            Established 2008 — Cartagena, Colombia
-                          </p>
-
-                          <p className="text-sm text-gray-600 font-semibold mt-1">
-                            12 active projects
-                          </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900">{developerInfo.name}</p>
+                          {developerInfo.contact && <p className="text-sm text-gray-500">{developerInfo.contact}</p>}
+                          {developerInfo.website && (
+                            <a href={developerInfo.website} target="_blank" rel="noreferrer" className="text-sm text-gold underline mt-1 block truncate">{developerInfo.website.replace(/^https?:\/\//, "")}</a>
+                          )}
                         </div>
                       </div>
                     ),
-                    // content: (
-                    //   <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 mb-3">
-                    //     <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                    //       <Building2 size={15} className="text-amber-600" />
-                    //     </div>
-                    //     <div>
-                    //       <p className="font-bold text-black text-xs font-antigua">
-                    //         Market Habitats Group
-                    //       </p>
-                    //       <p className="text-[10px] text-gray-400">
-                    //         Established 2008 — Cartagena, Colombia
-                    //       </p>
-                    //       <p className="text-[10px] text-amber-600 font-semibold mt-0.5">
-                    //         12 active projects
-                    //       </p>
-                    //     </div>
-                    //   </div>
-                    // ),
-                  },
+                  }] : []),
                   {
                     value: "address",
                     label: "Address",
@@ -743,11 +616,11 @@ export default function RealEstateDetails() {
 
                         <div>
                           <p className="font-semibold text-gray-900">
-                            Cartagena, Cartagena Province
+                            {address}
                           </p>
 
                           <p className="text-sm text-gray-500">
-                            Bolívar, Colombia — Manga District
+                            {listing?.neighborhood || listing?.sub_location || ""}
                           </p>
                         </div>
                       </div>
@@ -769,241 +642,36 @@ export default function RealEstateDetails() {
                     //   </div>
                     // ),
                   },
-                  {
+                  ...(amenities.length > 0 ? [{
                     value: "features",
-                    label: "Features",
+                    label: "Features & Amenities",
                     content: (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pb-4">
-                        {features.map((item, i) => (
-                          <div
-                            key={i}
-                            className="flex flex-col items-center gap-2 bg-gray-50 rounded-xl p-4 text-center"
-                          >
+                        {amenities.filter(Boolean).map((label, i) => (
+                          <div key={i} className="flex flex-col items-center gap-2 bg-gray-50 rounded-xl p-4 text-center">
                             <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
-                              <item.icon size={18} className="text-gray-500" />
+                              <Building2 size={18} className="text-gray-500" />
                             </div>
-
-                            <p className="text-sm text-gray-700 font-medium">
-                              {item.label}
-                            </p>
+                            <p className="text-sm text-gray-700 font-medium">{label}</p>
                           </div>
                         ))}
                       </div>
                     ),
-                    // content: (
-                    //   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pb-3">
-                    //     {features.map((item, i) => (
-                    //       <div
-                    //         key={i}
-                    //         className="flex flex-col items-center gap-1.5 bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100"
-                    //       >
-                    //         <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                    //           <item.icon size={13} className="text-amber-500" />
-                    //         </div>
-                    //         <p className="text-[10px] font-semibold text-gray-700 leading-tight">
-                    //           {item.label}
-                    //         </p>
-                    //       </div>
-                    //     ))}
-                    //   </div>
-                    // ),
-                  },
-                  {
-                    value: "comments",
-                    label: "User Comments (3)",
-                    content: (
-                      <div className="space-y-4 pb-4">
-                        {[
-                          {
-                            name: "Carlos V.",
-                            comment:
-                              "Excellent location and amazing amenities. The rooftop pool view is spectacular at sunset.",
-                            rating: 5,
-                            date: "2 months ago",
-                          },
-                          {
-                            name: "Sophie L.",
-                            comment:
-                              "The units are beautifully designed and the management team is very responsive.",
-                            rating: 4,
-                            date: "4 months ago",
-                          },
-                          {
-                            name: "Miguel R.",
-                            comment:
-                              "Great value for what you get. Highly recommended for long-term rental.",
-                            rating: 4,
-                            date: "6 months ago",
-                          },
-                        ].map((item, i) => (
-                          <div key={i} className="bg-gray-50 rounded-xl p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                  <User size={14} className="text-gray-600" />
-                                </div>
-
-                                <p className="font-semibold text-gray-900">
-                                  {item.name}
-                                </p>
-                              </div>
-
-                              <span className="text-xs text-gray-400">
-                                {item.date}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 mb-2">
-                              <StarRow count={item.rating} />
-                            </div>
-
-                            <p className="text-sm text-gray-600 leading-relaxed">
-                              {item.comment}
-                            </p>
-
-                            <div className="flex gap-4 mt-3 text-sm text-gray-500">
-                              <button className="flex items-center gap-1 hover:text-green transition">
-                                <ThumbsUp size={14} /> Helpful
-                              </button>
-
-                              <button className="flex items-center gap-1 hover:text-amber-500 transition">
-                                <MessageSquare size={14} /> Reply
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ),
-                    // content: (
-                    //   <div className="space-y-2.5 pb-3">
-                    //     {[
-                    //       {
-                    //         name: "Carlos V.",
-                    //         comment:
-                    //           "Excellent location and amazing amenities. The rooftop pool view is spectacular at sunset.",
-                    //         rating: 5,
-                    //         date: "2 months ago",
-                    //       },
-                    //       {
-                    //         name: "Sophie L.",
-                    //         comment:
-                    //           "The units are beautifully designed and the management team is very responsive.",
-                    //         rating: 4,
-                    //         date: "4 months ago",
-                    //       },
-                    //       {
-                    //         name: "Miguel R.",
-                    //         comment:
-                    //           "Great value for what you get. Highly recommended for long-term rental.",
-                    //         rating: 4,
-                    //         date: "6 months ago",
-                    //       },
-                    //     ].map((item, i) => (
-                    //       <div
-                    //         key={i}
-                    //         className="bg-gray-50 rounded-xl p-3 border border-gray-100"
-                    //       >
-                    //         <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                    //           <div className="flex items-center gap-2">
-                    //             <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
-                    //               <User size={10} className="text-amber-600" />
-                    //             </div>
-                    //             <span className="font-bold text-black text-xs font-antigua">
-                    //               {item.name}
-                    //             </span>
-                    //           </div>
-                    //           <div className="flex items-center gap-1.5">
-                    //             <StarRow count={item.rating} />
-                    //             <span className="text-[10px] text-gray-400">
-                    //               {item.date}
-                    //             </span>
-                    //           </div>
-                    //         </div>
-                    //         <p className="text-[10px] text-gray-500 leading-relaxed">
-                    //           {item.comment}
-                    //         </p>
-                    //         <div className="flex items-center gap-3 mt-1.5">
-                    //           <button className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-green transition">
-                    //             <ThumbsUp size={9} /> Helpful
-                    //           </button>
-                    //           <button className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-amber-500 transition">
-                    //             <MessageSquare size={9} /> Reply
-                    //           </button>
-                    //         </div>
-                    //       </div>
-                    //     ))}
-                    //   </div>
-                    // ),
-                  },
-                  {
-                    value: "blogs",
-                    label: "Blog posts related to this project",
+                  }] : []),
+                  ...(faqs.length > 0 ? [{
+                    value: "faqs",
+                    label: `Frequently Asked Questions (${faqs.length})`,
                     content: (
                       <div className="space-y-3 pb-4">
-                        {[
-                          {
-                            title: "Top 5 Reasons to Rent in Manga, Cartagena",
-                            date: "Jan 2025",
-                          },
-                          {
-                            title:
-                              "The Ultimate Guide to Cartagena Real Estate 2025",
-                            date: "Feb 2025",
-                          },
-                          {
-                            title:
-                              "Comparing Rental vs Buying in Colombia's Caribbean Coast",
-                            date: "Mar 2025",
-                          },
-                        ].map((item, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 hover:border-amber-300 border border-gray-100 cursor-pointer transition"
-                          >
-                            <p className="text-sm font-medium text-gray-800">
-                              {item.title}
-                            </p>
-
-                            <span className="text-xs text-gray-400">
-                              {item.date}
-                            </span>
+                        {faqs.map((item, i) => (
+                          <div key={i} className="bg-gray-50 rounded-xl p-4">
+                            <p className="font-semibold text-gray-900 mb-1">{item.question}</p>
+                            <p className="text-sm text-gray-600 leading-relaxed">{item.answer}</p>
                           </div>
                         ))}
                       </div>
                     ),
-                    // content: (
-                    //   <div className="space-y-2 pb-3">
-                    //     {[
-                    //       {
-                    //         title: "Top 5 Reasons to Rent in Manga, Cartagena",
-                    //         date: "Jan 2025",
-                    //       },
-                    //       {
-                    //         title:
-                    //           "The Ultimate Guide to Cartagena Real Estate 2025",
-                    //         date: "Feb 2025",
-                    //       },
-                    //       {
-                    //         title:
-                    //           "Comparing Rental vs Buying in Colombia's Caribbean Coast",
-                    //         date: "Mar 2025",
-                    //       },
-                    //     ].map((item, i) => (
-                    //       <div
-                    //         key={i}
-                    //         className="flex items-center justify-between gap-2 bg-gray-50 rounded-xl p-3 border border-gray-100 hover:border-amber-300 cursor-pointer transition"
-                    //       >
-                    //         <p className="text-xs font-semibold text-black flex-1">
-                    //           {item.title}
-                    //         </p>
-                    //         <span className="text-[10px] text-gray-400 shrink-0">
-                    //           {item.date}
-                    //         </span>
-                    //       </div>
-                    //     ))}
-                    //   </div>
-                    // ),
-                  },
+                  }] : []),
                 ].map((item) => (
                   <AccordionItem
                     key={item.value}
@@ -1222,228 +890,88 @@ export default function RealEstateDetails() {
               </button>
             </div>
           </div>
+          {nearbyCards.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
-            {nearbyProjects.map((item, i) => (
+            {nearbyCards.map((item, i) => (
               <PropertyCard key={i} item={item} />
             ))}
           </div>
+          ) : (
+            <p className="text-sm text-gray-400 py-4">No nearby listings available yet.</p>
+          )}
         </div>
       </div>
 
       {/* ══ HOME IN THE AREA MAP ══ */}
       <div className="bg-white px-4 sm:px-6 md:px-10 lg:px-14 py-8">
         <div className="mx-auto max-w-[1100px]">
-          <h2 className="text-xl md:text-2xl font-extrabold  text-black mb-4">
+          <h2 className="text-xl md:text-2xl font-extrabold text-black mb-4">
             Home in the area
           </h2>
-          <div
-            className="rounded-2xl overflow-hidden border border-gray-200 relative"
-            style={{ height: "300px" }}
-          >
-            {/* <div className="w-full h-[450px] rounded-xl overflow-hidden">
-              <MapContainer
-                center={position}
-                zoom={12}
-                scrollWheelZoom
-                className="h-full w-full"
-              > */}
-            <div className="h-[500px] w-full">
-              <MapContainer
-                center={[45.558, -73.712]}
-                zoom={12}
-                className="h-full w-full"
-              >
-                {/* <TileLayer
-                  attribution="© OpenStreetMap contributors"
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                /> */}
-                <TileLayer
-                  attribution="© OpenStreetMap contributors © CARTO"
-                  url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                />
-                <Marker ref={markerRef} position={position}>
-                  <Popup closeButton={false} autoClose={false}>
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">
-                        Market habitats locatifs
-                      </h3>
-                      <p className="text-sm text-gray-500">Condos</p>
-                      <p className="text-xs text-gray-500">You are here</p>
-                      <p className="font-bold">$1,653 per month</p>
-                    </div>
-                  </Popup>
-                </Marker>
-
-                {/* <MarkerClusterGroup>
-                  {locations.map((loc) => (
-                    <Marker
-                      key={loc.id}
-                      position={loc.position}
-                      icon={customIcon}
-                    >
-                      <Popup open={true}>
-                        <div className="space-y-1">
-                          <h3 className="font-semibold">{loc.name}</h3>
-                          <p className="text-sm text-gray-500">Condos</p>
-                          <p className="font-bold">{loc.price}</p>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  ))}
-                </MarkerClusterGroup> */}
-              </MapContainer>
-            </div>
-
-            {/* <iframe
-              title="Area Map"
-              className="w-full h-full border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              src="https://www.google.com/maps?q=Manga+Cartagena+Colombia&output=embed"
-            />
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-lg p-3 min-w-[170px] text-center border border-gray-100">
-              <p className="font-extrabold text-black text-xs font-antigua leading-tight mb-0.5">
-                Market habitats locatifs
-              </p>
-              <p className="text-[10px] text-green font-bold">$1,053/month</p>
-              <button className="mt-2 bg-green text-white text-[9px] font-bold px-4 py-1.5 rounded-full w-full hover:opacity-90 transition">
-                View Project
-              </button>
-            </div> */}
+          <div className="rounded-2xl overflow-hidden border border-gray-200 h-[300px]">
+            {mapSrc ? (
+              <iframe
+                title="Location Map"
+                className="w-full h-full border-0"
+                loading="lazy"
+                allowFullScreen
+                src={mapSrc}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                Location not available
+              </div>
+            )}
           </div>
+          {address && (
+            <p className="mt-3 text-sm text-gray-600 flex items-center gap-2 font-medium">
+              <MapPin size={16} className="text-gold" /> {address}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* ══ CUSTOMERS ALSO SEEN SLIDER ══ */}
+      {/* ══ AROUND THIS PLACE ══ */}
       <div className="bg-white px-4 sm:px-6 md:px-10 lg:px-14 pb-10">
         <div className="mx-auto max-w-[1100px]">
-          <h2 className="text-xl md:text-2xl font-extrabold  text-black mb-4">
-            Customers who have seen this real estate project have also seen
-            these
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {alsoSeenProjects.map((item, i) => (
-              <Card
-  key={i}
-  className="overflow-hidden rounded-md group cursor-pointer shadow hover:shadow-xl transition duration-300"
->
-  {/* IMAGE */}
-  <div className="relative h-[230px] overflow-hidden">
-    <img
-      src={item.image}
-      alt={item.title}
-      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-    />
-
-    {/* Favorite Button */}
-    <button className="absolute top-4 right-4 w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center shadow-md hover:bg-yellow-500 transition">
-      <Heart size={20} className="text-black" />
-    </button>
-  </div>
-
-  {/* CONTENT */}
-  <CardContent className="p-3 space-y-2">
-    {/* Title */}
-    <div>
-    <h3 className="font-semibold text-lg text-gray-900">
-      {item.title}
-    </h3>
-
-    {/* Location */}
-    <p className="text-gray-500 text-sm">
-      {item.sub}
-    </p>
-    </div>
-
-    {/* Property Type */}
-    <p className="text-gray-500 text-sm">
-      {item.type}
-    </p>
-
-    {/* Features list */}
-    <ul className="text-gray-500 text-sm list-disc pl-4 space-y-1">
-      <li>103 units</li>
-      <li>1 to 3 bedrooms</li>
-      <li>Move-in-ready</li>
-    </ul>
-
-    {/* Price */}
-    <p className="text-gray-900 font-semibold pt-2 text-sm">
-      Starting at {item.price}
-      <span className="text-gray-500 font-medium">/month</span>
-    </p>
-
-    {/* Rating */}
-    <StarRow count={item.rating} />
-  </CardContent>
-</Card>
-            ))}
+          <div className="w-full mb-4 md:mb-5">
+            <p className="text-[10px] md:text-xs uppercase w-full text-center tracking-widest font-medium text-black/70 mb-0.5">Explore</p>
+            <h2 className="text-xl md:text-2xl font-extrabold text-center font-antigua text-black">Around This Place</h2>
           </div>
-          {/* <div className="relative">
-            <button
-              onClick={() => scrollAlsoSeen("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-8 h-8 rounded-full bg-amber-400 text-white flex items-center justify-center shadow hover:bg-amber-500 transition"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <div
-              ref={alsoSeenRef}
-              className="gird grid-cols-1 md:grid-cols-4 pb-2 px-1"
-              style={{
-                scrollSnapType: "x mandatory",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-              }}
-            >
-              {alsoSeenProjects.map((item, i) => (
-                <div
-                  key={i}
-                  className=" bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow flex-shrink-0 flex flex-col"
-                  style={{ scrollSnapAlign: "start" }}
-                >
-                  <div className="relative h-[130px] sm:h-[145px] overflow-hidden flex-shrink-0">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                    />
-                    <button className="absolute top-2 right-2 w-7 h-7 bg-amber-400 rounded-full flex items-center justify-center hover:bg-amber-500 transition shadow">
-                      <Heart size={11} className="text-white" />
+          {alsoSeenCards.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {alsoSeenCards.map((item, i) => (
+                <Link key={i} href={item.href || "#"}>
+                <Card className="overflow-hidden rounded-md group cursor-pointer shadow hover:shadow-xl transition duration-300">
+                  <div className="relative h-[230px] overflow-hidden">
+                    <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                    <button className="absolute top-4 right-4 w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center shadow-md hover:bg-yellow-500 transition">
+                      <Heart size={20} className="text-black" />
                     </button>
                   </div>
-                  <div className="p-3 flex flex-col flex-1">
-                    <p className="font-extrabold text-black text-xs font-antigua leading-tight mb-0.5">
-                      {item.title}
-                    </p>
-                    <p className="text-[10px] text-gray-400 mb-0.5">
-                      {item.sub}
-                    </p>
-                    <p className="text-[10px] text-gray-500 mb-1.5">
-                      {item.type}
-                    </p>
-                    <div className="flex items-center gap-2 text-[10px] text-gray-500 mb-1.5">
-                      <span className="flex items-center gap-0.5">
-                        <BedDouble size={9} /> {item.beds}
-                      </span>
-                      <span className="flex items-center gap-0.5">
-                        <Bath size={9} /> {item.baths}
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold text-green mt-auto mb-1">
+                  <CardContent className="p-3 space-y-2">
+                    <h3 className="font-semibold text-lg text-gray-900 leading-tight">{item.title}</h3>
+                    {item.sub && <p className="text-gray-500 text-sm">{item.sub}</p>}
+                    <p className="text-gray-500 text-sm">{item.type}</p>
+                    <p className="text-gray-900 font-semibold pt-2 text-sm">
                       Starting at {item.price}
+                      <span className="text-gray-500 font-medium">/{priceUnit}</span>
                     </p>
-                    <StarRow count={item.rating} />
-                  </div>
-                </div>
+                    {item.rating > 0 && <StarRow count={Math.round(item.rating)} />}
+                  </CardContent>
+                </Card>
+                </Link>
               ))}
             </div>
-            <button
-              onClick={() => scrollAlsoSeen("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-8 h-8 rounded-full bg-green text-white flex items-center justify-center shadow hover:opacity-90 transition"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div> */}
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-black/50 gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              </svg>
+              <p className="text-sm font-medium">No listings found in this neighbourhood yet.</p>
+            </div>
+          )}
         </div>
       </div>
 

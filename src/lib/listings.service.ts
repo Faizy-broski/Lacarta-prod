@@ -1,23 +1,13 @@
 /**
  * listings.service.ts
  *
- * Shared Supabase query layer for the public portal.
+ * Server-safe Supabase query layer (no React imports).
+ * Import these functions in Server Components and API routes.
  *
- * Dashboard admins manage listings via the /dashboard/listings CRUD UI.
- * Those records land in Supabase. Public pages call this service to
- * display live data instead of the static fallback in @public/data/*.ts.
- *
- * Usage example in a public page (Hotels.tsx):
- *
- *   import { usePublicListings } from '@/lib/listings.service'
- *
- *   export default function Hotels() {
- *     const { listings, loading } = usePublicListings('hotel')
- *     // render listings ...
- *   }
+ * For React hooks (usePublicListings, useListing, useFeaturedListings),
+ * import from '@/lib/listings.hooks' in Client Components.
  */
 
-import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -36,13 +26,15 @@ export interface PublicListing {
   id: string
   title: string
   subtitle: string
-  image: string
-  rating: number
-  category: ListingCategory
-  slug: string
-  featured: boolean
-  published: boolean
+  image?: string
+  cover_image?: string
+  seo_slug?: string
+  status?: string
+  category: ListingCategory | string
+  slug?: string
+  featured?: boolean
   created_at: string
+  [key: string]: any
 }
 
 // ─── Raw fetch (no React) — use in SSG / server contexts ─────────────────────
@@ -55,20 +47,36 @@ export async function fetchPublicListings(
   category: ListingCategory,
   limit = 50
 ): Promise<PublicListing[]> {
+  // Resolve category name → UUID (category_id is a UUID column, not a string)
+  const { data: cat } = await supabase
+    .from('categories')
+    .select('id')
+    .ilike('name', category)
+    .eq('type', 'listing')
+    .single()
+
+  if (!cat) {
+    console.warn(`[listings.service] fetchPublicListings: category "${category}" not found`)
+    return []
+  }
+
   const { data, error } = await supabase
     .from('listings')
-    .select('id, title, subtitle, image, rating, category, slug, featured, published, created_at')
-    .eq('category', category)
-    .eq('published', true)
-    .order('featured', { ascending: false })
-    .order('rating', { ascending: false })
+    .select('id, title, subtitle, cover_image, category_id, categories(name), seo_slug, status, created_at')
+    .eq('category_id', cat.id)
+    .in('status', ['active', 'featured'])
+    .order('status', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit)
 
   if (error) {
     console.error(`[listings.service] fetchPublicListings(${category}):`, error.message)
     return []
   }
-  return data ?? []
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    category: Array.isArray(row.categories) ? row.categories[0]?.name : row.categories?.name ?? category
+  })) as PublicListing[]
 }
 
 /**
@@ -77,16 +85,19 @@ export async function fetchPublicListings(
 export async function fetchListingBySlug(slug: string): Promise<PublicListing | null> {
   const { data, error } = await supabase
     .from('listings')
-    .select('id, title, subtitle, image, rating, category, slug, featured, published, created_at')
-    .eq('slug', slug)
-    .eq('published', true)
+    .select('*, categories(name)')
+    .eq('seo_slug', slug)
+    .in('status', ['active', 'featured'])
     .single()
 
   if (error) {
     console.error(`[listings.service] fetchListingBySlug(${slug}):`, error.message)
     return null
   }
-  return data
+  return data ? ({
+    ...data,
+    category: Array.isArray(data.categories) ? data.categories[0]?.name : data.categories?.name ?? 'hotel'
+  } as PublicListing) : null
 }
 
 /**
@@ -95,124 +106,140 @@ export async function fetchListingBySlug(slug: string): Promise<PublicListing | 
 export async function fetchFeaturedListings(limit = 12): Promise<PublicListing[]> {
   const { data, error } = await supabase
     .from('listings')
-    .select('id, title, subtitle, image, rating, category, slug, featured, published, created_at')
-    .eq('published', true)
-    .eq('featured', true)
-    .order('rating', { ascending: false })
+    .select('id, title, subtitle, cover_image, category_id, categories(name), seo_slug, status, created_at')
+    .eq('status', 'featured')
     .limit(limit)
 
   if (error) {
     console.error('[listings.service] fetchFeaturedListings:', error.message)
     return []
   }
-  return data ?? []
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    category: Array.isArray(row.categories) ? row.categories[0]?.name : row.categories?.name ?? 'hotel'
+  })) as PublicListing[]
 }
 
-// ─── React hooks — use inside public page components ─────────────────────────
+// ─── Portal: fetch real listings by category name (for public pages) ─────────
 
-interface UsePublicListingsResult {
-  listings: PublicListing[]
-  loading: boolean
-  error: string | null
-}
-
-/**
- * Hook: fetch published listings for a category.
- *
- * Falls back to an empty array on error so pages can show static data.
- *
- * @example
- *   const { listings, loading } = usePublicListings('hotel')
- */
-export function usePublicListings(
-  category: ListingCategory,
-  limit = 50
-): UsePublicListingsResult {
-  const [listings, setListings] = useState<PublicListing[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-
-    fetchPublicListings(category, limit).then((data) => {
-      if (!cancelled) {
-        setListings(data)
-        setError(data.length === 0 ? 'No listings found' : null)
-        setLoading(false)
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [category, limit])
-
-  return { listings, loading, error }
+export interface PortalListing {
+  id: string
+  title: string
+  subtitle: string
+  image: string
+  rating: number
+  href: string
+  category: string
+  types: string[]  // from category_tags — used for frontend type filter pills
+  feature_post_type: 'reserve' | 'menu'
 }
 
 /**
- * Hook: fetch a single listing by slug.
+ * Fetch all active/featured listings for a given category name (e.g. 'Hotels').
+ * Looks up the category UUID first, then queries listings by category_id.
+ * Returns listings shaped for both PaginationListing and ListingPage components.
  *
- * @example
- *   const { listing, loading } = useListing('sofitel-legend-santa-clara')
+ * @param categoryName  Exact category name as stored in DB (e.g. 'Hotels', 'Real Estate')
+ * @param detailPageBase  Base URL for detail pages (e.g. 'Detailed-Hotel')
  */
-export function useListing(slug: string) {
-  const [listing, setListing] = useState<PublicListing | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export async function fetchPortalListings(
+  categoryName: string,
+  detailPageBase: string,
+  limit = 100
+): Promise<PortalListing[]> {
+  const { data: cat } = await supabase
+    .from('categories')
+    .select('id')
+    .ilike('name', categoryName)
+    .eq('type', 'listing')
+    .single()
 
-  useEffect(() => {
-    if (!slug) return
-    let cancelled = false
-    setLoading(true)
+  if (!cat) return []
 
-    fetchListingBySlug(slug).then((data) => {
-      if (!cancelled) {
-        setListing(data)
-        setError(data ? null : 'Listing not found')
-        setLoading(false)
-      }
-    })
+  const { data, error } = await supabase
+    .from('listings')
+    .select('id, title, subtitle, cover_image, seo_slug, status, category_tags, feature_post_type, categories(name)')
+    .eq('category_id', cat.id)
+    .in('status', ['active', 'featured'])
+    .order('status', { ascending: false })   // featured first
+    .order('created_at', { ascending: false })
+    .limit(limit)
 
-    return () => {
-      cancelled = true
-    }
-  }, [slug])
+  if (error) {
+    console.error('[listings.service] fetchPortalListings:', error.message)
+    return []
+  }
 
-  return { listing, loading, error }
+  return (data ?? []).map((l: any) => ({
+    id: l.id,
+    title: l.title ?? '',
+    subtitle: l.subtitle ?? '',
+    image: l.cover_image ?? '',
+    rating: l.rating ?? 0,
+    href: `/${detailPageBase}/${l.seo_slug ?? l.id}`,
+    category: (l.categories as any)?.name ?? categoryName,
+    types: Array.isArray(l.category_tags) ? l.category_tags : [],
+    feature_post_type: l.feature_post_type ?? 'reserve',
+  }))
 }
 
 /**
- * Hook: fetch featured listings for the homepage hero / cards.
+ * Fetch active listings in the same neighborhood as the current listing.
+ * Used for the "Around This Place" section on detail pages.
  *
- * @example
- *   const { listings, loading } = useFeaturedListings()
+ * @param categoryName   Display name of the category (e.g. 'Hotels', 'Gastronomy')
+ * @param detailPageBase Base URL for detail pages (e.g. 'Detailed-Hotel')
+ * @param neighborhood   Neighborhood tag to filter by (e.g. 'Boca Grande')
+ * @param excludeSlug    Slug of the current listing to exclude from results
  */
-export function useFeaturedListings(limit = 12) {
-  const [listings, setListings] = useState<PublicListing[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export async function fetchNearbyListings(
+  categoryName: string,
+  detailPageBase: string,
+  neighborhood: string,
+  excludeSlug: string,
+  limit = 8
+): Promise<PortalListing[]> {
+  if (!neighborhood) return []
 
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
+  const { data: cat } = await supabase
+    .from('categories')
+    .select('id')
+    .ilike('name', categoryName)
+    .eq('type', 'listing')
+    .single()
 
-    fetchFeaturedListings(limit).then((data) => {
-      if (!cancelled) {
-        setListings(data)
-        setError(data.length === 0 ? 'No featured listings found' : null)
-        setLoading(false)
-      }
-    })
+  if (!cat) return []
 
-    return () => {
-      cancelled = true
-    }
-  }, [limit])
+  let query = supabase
+    .from('listings')
+    .select('id, title, subtitle, cover_image, seo_slug, status, category_tags, categories(name)')
+    .eq('category_id', cat.id)
+    .in('status', ['active', 'featured'])
+    .contains('category_tags', [neighborhood])
+    .order('status', { ascending: false })
+    .limit(limit)
 
-  return { listings, loading, error }
+  if (excludeSlug) {
+    query = query.neq('seo_slug', excludeSlug)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('[listings.service] fetchNearbyListings:', error.message)
+    return []
+  }
+
+  return (data ?? []).map((l: any) => ({
+    id: l.id,
+    title: l.title ?? '',
+    subtitle: l.subtitle ?? '',
+    image: l.cover_image ?? '',
+    rating: l.rating ?? 0,
+    href: `/${detailPageBase}/${l.seo_slug ?? l.id}`,
+    category: (l.categories as any)?.name ?? categoryName,
+    types: Array.isArray(l.category_tags) ? l.category_tags : [],
+  }))
 }
 
 // ─── Dashboard: client's own listings ────────────────────────────────────────
@@ -226,12 +253,13 @@ export interface ClientListing {
   address: string | null
   category: { name: string } | null
   created_at: string
+  subscription_tier: string | null
 }
 
 export async function fetchClientListings(clientId: string): Promise<ClientListing[]> {
   const { data, error } = await supabase
     .from('listings')
-    .select('id, title, subtitle, cover_image, status, address, category:categories!category_id(name), created_at')
+    .select('id, title, subtitle, cover_image, status, address, category:categories!category_id(name), created_at, listing_subscriptions(status, subscription_tiers(name))')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
 
@@ -239,5 +267,21 @@ export async function fetchClientListings(clientId: string): Promise<ClientListi
     console.error('[listings.service] fetchClientListings:', error.message)
     return []
   }
-  return (data ?? []) as ClientListing[]
+  return (data ?? []).map((row: any) => {
+    const subscriptions: Array<{ status: string; subscription_tiers: { name: string } | null }> = Array.isArray(row.listing_subscriptions)
+      ? row.listing_subscriptions
+      : row.listing_subscriptions ? [row.listing_subscriptions] : []
+    const activeSub = subscriptions.find((s) => s.status === 'active' || s.status === 'trialing')
+    return {
+      id: row.id,
+      title: row.title,
+      subtitle: row.subtitle,
+      cover_image: row.cover_image,
+      status: row.status,
+      address: row.address,
+      category: Array.isArray(row.category) ? row.category[0] ?? null : row.category ?? null,
+      created_at: row.created_at,
+      subscription_tier: activeSub?.subscription_tiers?.name?.toLowerCase() ?? null,
+    } satisfies ClientListing
+  })
 }

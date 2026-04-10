@@ -1,81 +1,88 @@
-import {
-  Calendar,
-  CalendarDays,
-  NotebookPen,
-  Star,
-  History,
-} from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card'
+'use client'
 
-const tabsData = [
+import { useEffect, useState } from 'react'
+import { Calendar, CalendarDays, NotebookPen, Star, History, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
+import { fetchEventStats, type EventStats } from '@/lib/services/events.service'
+import { useAuthStore } from '@/lib/auth/auth.store'
+
+const CONFIGS = [
   {
+    key: 'upcoming' as keyof EventStats,
     title: 'Upcoming Events',
-    icon: <Calendar size={50} className='h-5 w-5 text-gold' />,
-    quantity: '24',
-    color: 'bg-gold/10 rounded-md',
-    border: 'bg-gold',
+    icon: Calendar,
+    iconColor: 'text-gold',
+    bg: 'bg-gold/10',
+    bar: 'bg-gold',
   },
   {
+    key: 'thisWeek' as keyof EventStats,
     title: 'Events This Week',
-    icon: <CalendarDays size={50} className='h-5 w-5 text-green' />,
-    quantity: '8',
-    color: 'bg-green/10 rounded-md',
-    border: 'bg-green',
+    icon: CalendarDays,
+    iconColor: 'text-green',
+    bg: 'bg-green/10',
+    bar: 'bg-green',
   },
   {
+    key: 'featured' as keyof EventStats,
     title: 'Featured Events',
-    icon: <Star size={50} className='h-5 w-5 text-red' />,
-    quantity: '5',
-    color: 'bg-red/10 rounded-md',
-    border: 'bg-red',
+    icon: Star,
+    iconColor: 'text-red',
+    bg: 'bg-red/10',
+    bar: 'bg-red',
   },
   {
-    title: 'Drafts Events',
-    icon: <NotebookPen size={50} className='h-5 w-5 text-gold' />,
-    quantity: '12',
-    color: 'bg-gold/10 rounded-md',
-    border: 'bg-gold',
+    key: 'drafts' as keyof EventStats,
+    title: 'Drafts & Pending',
+    icon: NotebookPen,
+    iconColor: 'text-gold',
+    bg: 'bg-gold/10',
+    bar: 'bg-gold',
   },
   {
+    key: 'past' as keyof EventStats,
     title: 'Past Events',
-    icon: <History size={50} className='h-5 w-5 text-green' />,
-    quantity: '156',
-    color: 'bg-green/10 rounded-md',
-    border: 'bg-green',
+    icon: History,
+    iconColor: 'text-green',
+    bg: 'bg-green/10',
+    bar: 'bg-green',
   },
 ]
 
 export default function TabsPage() {
+  const [stats, setStats] = useState<EventStats | null>(null)
+  const user = useAuthStore((s) => s.user)
+  const isAdmin = ['admin', 'owner', 'assistant'].includes(user?.role?.[0] ?? '')
+
+  useEffect(() => {
+    // Admins see platform-wide stats; clients see only their own
+    fetchEventStats(isAdmin ? undefined : user?.accountNo).then(setStats)
+  }, [isAdmin, user?.accountNo])
+
   return (
-    <>
-      <div className='grid gap-4 sm:grid-cols-3 lg:grid-cols-5'>
-        {tabsData.map((item) => (
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0'>
-              <CardTitle className={`${item.color} p-2 text-sm font-medium`}>
-                {item.icon}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='font-antigua mb-2 text-3xl font-extrabold'>
-                {item.quantity}
-              </div>
-              <h2 className='text-xs font-medium text-muted-foreground'>
-                {item.title}
-              </h2>
-            </CardContent>
-            <CardFooter>
-              <div className={`h-[2px] w-10 ${item.border}`} />
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-    </>
+    <div className='grid gap-4 sm:grid-cols-3 lg:grid-cols-5'>
+      {CONFIGS.map(({ key, title, icon: Icon, iconColor, bg, bar }) => (
+        <Card key={key}>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0'>
+            <div className={`${bg} rounded-md p-2`}>
+              <Icon className={`h-5 w-5 ${iconColor}`} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className='font-antigua mb-2 text-3xl font-extrabold'>
+              {stats === null ? (
+                <Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
+              ) : (
+                stats[key]
+              )}
+            </div>
+            <h2 className='text-xs font-medium text-muted-foreground'>{title}</h2>
+          </CardContent>
+          <CardFooter>
+            <div className={`h-[2px] w-10 ${bar}`} />
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
   )
 }

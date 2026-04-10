@@ -4,11 +4,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, LogIn } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-// import { toast } from 'sonner'
-// import { useAuthStore } from '@/stores/auth-store'
 import { signIn } from '@/lib/auth/auth.service'
-// import { supabase } from '@/lib/supabase/supabase'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,8 +41,6 @@ export function UserAuthForm({
   ...props
 }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  // const { auth } = useAuthStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,7 +57,8 @@ export function UserAuthForm({
       const redirect = await signIn(data.email.trim(), data.password)
 
       if (redirect) {
-        router.push(redirect)
+        // Full navigation so Next.js middleware re-reads the Supabase session cookie
+        window.location.href = redirectTo ?? redirect
       } else {
         setIsLoading(false)
       }

@@ -1,156 +1,144 @@
-// import { NotebookPen } from 'lucide-react'
-// import { Badge } from '@/components/ui/badge'
-// import { Button } from '@/components/ui/button'
-// import { Card, CardContent, CardFooter } from '@/components/ui/card'
-// import img from '/images/shadcn-admin.png'
-// export default function DraftEvents() {
-//   return (
-//     <div>
-//       <h2 className='mb-3 font-bold'>Drafts & Pending</h2>
-//       <div className='grid grid-cols-1 gap-4 lg:grid-cols-3'>
-//         {['Coffee Tasting', 'Sunset Boat Tour', 'Salsa Dancing'].map(
-//           (title, i) => (
-//             <Card key={i} className='gap-0 py-3'>
-//               <CardContent className='space-y-2 py-0'>
-//                 <div className='flex items-center gap-2'>
-//                   <NotebookPen
-//                     size={18}
-//                     className='bg-yellow-100 text-yellow-500'
-//                   />
-//                   <p className='font-medium'>{title}</p>
-//                 </div>
-//                 <div className='mb-2 flex items-center gap-2'>
-//                   <div className='mb-2 flex h-10 w-10 gap-2 overflow-hidden rounded-full'>
-//                     <img src={img} className='h-full w-full'></img>
-//                   </div>
-//                   <p className='text-sm text-muted-foreground'>
-//                     created by maria Garcia
-//                   </p>
-//                 </div>
-//                 <hr className='py-2'></hr>
-//               </CardContent>
-//               <CardFooter>
-//                 <div className='flex w-full items-center justify-between'>
-//                   <div className='flex gap-2'>
-//                     <span className='text-xs text-muted-foreground'>
-//                       Homepage
-//                     </span>
-//                     <Badge variant='outline'>Needs Review</Badge>
-//                   </div>
-//                   <Button className='bg-white text-sm text-yellow-500 shadow-none'>
-//                     Continue
-//                   </Button>
-//                 </div>
-//               </CardFooter>
-//             </Card>
-//           )
-//         )}
-//       </div>
-//     </div>
-//   )
-// }
-import { NotebookPen, Clock } from 'lucide-react'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { NotebookPen, Clock, Loader2, Send } from 'lucide-react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { fetchDraftAndPendingEvents, fetchEvents, updateEvent, type Event } from '@/lib/services/events.service'
+import { useAuthStore } from '@/lib/auth/auth.store'
 
-const drafts = [
-  {
-    title: 'Colombian Coffee Tasting Experience',
-    author: 'María Garcia',
-    time: '2 hours ago',
-    status: 'Needs Review',
-    avatar: 'https://i.pravatar.cc/40?img=12',
-  },
-  {
-    title: 'Sunset Boat Tour to Islas del Rosario',
-    author: 'Carlos Mendez',
-    time: 'Yesterday',
-    status: 'In Progress',
-    avatar: 'https://i.pravatar.cc/40?img=32',
-  },
-  {
-    title: 'Salsa Dancing Night at Café Havana',
-    author: 'Ana Rodriguez',
-    time: '3 days ago',
-    status: 'Needs Review',
-    avatar: 'https://i.pravatar.cc/40?img=48',
-  },
-]
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
+}
 
 export default function DraftEvents() {
+  const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+  const [acting, setActing] = useState<string | null>(null)
+
+  const user = useAuthStore((s) => s.user)
+  const isAdmin = ['admin', 'owner', 'assistant'].includes(user?.role?.[0] ?? '')
+
+  useEffect(() => {
+    if (isAdmin) {
+      // Admins: show only drafts (pending events are handled separately in PendingEvents)
+      fetchEvents({ status: 'draft' }).then((data) => {
+        setEvents(data)
+        setLoading(false)
+      })
+    } else {
+      // Clients: show own drafts + pending (own submissions), explicitly scoped to user id
+      fetchDraftAndPendingEvents(9, user?.accountNo).then((data) => {
+        setEvents(data)
+        setLoading(false)
+      })
+    }
+  }, [isAdmin])
+
+  const submitForReview = async (id: string) => {
+    setActing(id)
+    try {
+      await updateEvent(id, { status: 'pending' })
+      setEvents((prev) => prev.map((e) => e.id === id ? { ...e, status: 'pending' } : e))
+      toast.success('Event submitted for review.')
+    } catch {
+      toast.error('Failed to submit event.')
+    } finally {
+      setActing(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className='flex justify-center py-10'>
+        <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+      </div>
+    )
+  }
+
+  if (events.length === 0) return null
+
   return (
     <div className='space-y-5'>
-      {/* Header */}
       <div className='flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between'>
         <div>
           <h2 className='font-antigua text-lg font-semibold'>
-            Drafts & Pending
+            {isAdmin ? 'Drafts' : 'My Events'}
           </h2>
-          <p className='text-sm text-muted-foreground'>{drafts.length} items</p>
+          <p className='text-sm text-muted-foreground'>{events.length} item{events.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
-      {/* Cards */}
       <div className='grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3'>
-        {drafts.map((draft, i) => (
-          <Card
-            key={i}
-            className='rounded-xl border bg-white p-4 pb-3 shadow-sm transition hover:shadow-md'
-          >
+        {events.map((event) => (
+          <Card key={event.id} className='rounded-xl border bg-white p-4 pb-3 shadow-sm transition hover:shadow-md'>
             <CardContent className='flex h-full flex-col justify-between space-y-4 p-0'>
+
               {/* Title */}
               <div className='flex items-start gap-3 sm:items-center'>
                 <div className='flex shrink-0 items-center justify-center rounded-lg bg-gold/10 p-2'>
                   <NotebookPen size={18} className='text-gold' />
                 </div>
-
-                <p className='truncate text-sm font-medium'>{draft.title}</p>
+                <p className='truncate text-sm font-medium'>{event.title}</p>
               </div>
 
               {/* Author */}
               <div className='flex items-center gap-2'>
-                <img
-                  src={draft.avatar}
-                  className='h-6 w-6 shrink-0 rounded-full object-cover'
-                />
-
+                <div className='flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold uppercase text-muted-foreground'>
+                  {event.creator?.full_name?.[0] ?? '?'}
+                </div>
                 <p className='text-xs text-muted-foreground'>
-                  Created by {draft.author}
+                  {event.creator?.full_name ? `Created by ${event.creator.full_name}` : 'Unknown author'}
                 </p>
               </div>
 
-              {/* Divider */}
-              {/* <div className="h-px w-full bg-border" /> */}
-
               {/* Footer */}
               <CardFooter className='p-0'>
-                <div className='flex w-full flex-wrap items-center justify-between gap-2 border-t pt-2 sm:pt-0'>
+                <div className='flex w-full flex-wrap items-center justify-between gap-2 border-t pt-2'>
                   <div className='flex flex-wrap items-center gap-2'>
                     <div className='flex items-center gap-1 text-xs text-muted-foreground'>
                       <Clock size={14} />
-                      {draft.time}
+                      {timeAgo(event.created_at)}
                     </div>
 
-                    {draft.status === 'Needs Review' && (
-                      <Badge className='rounded-full bg-red-100 text-xs font-normal text-red-600 hover:bg-red-100'>
-                        Needs Review
+                    {event.status === 'pending' && (
+                      <Badge className='rounded-full bg-yellow-100 text-xs font-normal text-yellow-700 hover:bg-yellow-100'>
+                        Awaiting Review
                       </Badge>
                     )}
-
-                    {draft.status === 'In Progress' && (
-                      <Badge className='rounded-full bg-green-100 text-xs font-normal text-green-700 hover:bg-green-100'>
-                        In Progress
+                    {event.status === 'draft' && (
+                      <Badge className='rounded-full bg-blue-100 text-xs font-normal text-blue-700 hover:bg-blue-100'>
+                        Draft
                       </Badge>
                     )}
                   </div>
 
-                  <Button
-                    variant='ghost'
-                    className='p-0 text-xs font-normal text-gold-light hover:bg-transparent hover:text-gold'
-                  >
-                    Continue →
-                  </Button>
+                  {/* Clients: submit draft for review; pending = waiting */}
+                  {!isAdmin && event.status === 'draft' && (
+                    <Button
+                      size='sm'
+                      variant='ghost'
+                      className='h-7 gap-1 p-1 text-xs font-medium text-gold hover:bg-gold/10 hover:text-gold'
+                      disabled={acting === event.id}
+                      onClick={() => submitForReview(event.id)}
+                    >
+                      {acting === event.id
+                        ? <Loader2 className='h-3 w-3 animate-spin' />
+                        : <Send className='h-3 w-3' />}
+                      Submit for Review
+                    </Button>
+                  )}
+                  {!isAdmin && event.status === 'pending' && (
+                    <span className='text-xs text-muted-foreground italic'>Under review</span>
+                  )}
                 </div>
               </CardFooter>
             </CardContent>
@@ -158,79 +146,5 @@ export default function DraftEvents() {
         ))}
       </div>
     </div>
-    // <div className='space-y-5'>
-    //   {/* Header */}
-
-    //   <div className='flex items-start justify-between'>
-    //     <div>
-    //       <h2 className='font-antigua text-lg font-semibold'>
-    //         Drafts & Pending
-    //       </h2>
-    //       <p className='text-sm text-muted-foreground'>{drafts.length} items</p>
-    //     </div>
-    //   </div>
-
-    //   {/* Cards */}
-    //   <div className='grid gap-5 md:grid-cols-2 xl:grid-cols-3'>
-    //     {drafts.map((draft, i) => (
-    //       <Card key={i} className='rounded-xl border bg-white p-4 shadow-sm'>
-    //         <CardContent className='space-y-4 p-0'>
-    //           {/* Title */}
-    //           <div className='flex items-center gap-3'>
-    //             <div className='flex items-center justify-center rounded-lg bg-gold/10 p-2'>
-    //               <NotebookPen size={18} className='text-gold' />
-    //             </div>
-
-    //             <p className='truncate text-sm font-medium'>{draft.title}</p>
-    //           </div>
-
-    //           {/* Author */}
-    //           <div className='flex items-center gap-3'>
-    //             <img
-    //               src={draft.avatar}
-    //               className='h-6 w-6 rounded-full object-cover'
-    //             />
-
-    //             <p className='text-xs text-muted-foreground'>
-    //               Created by {draft.author}
-    //             </p>
-    //           </div>
-
-    //           {/* Divider */}
-    //           <div className='h-px w-full bg-border' />
-
-    //           {/* Footer */}
-    //           <CardFooter className='flex items-center justify-between p-0'>
-    //             <div className='flex items-center gap-3'>
-    //               <div className='flex items-center gap-1 text-xs text-muted-foreground'>
-    //                 <Clock size={14} />
-    //                 {draft.time}
-    //               </div>
-
-    //               {draft.status === 'Needs Review' && (
-    //                 <Badge className='rounded-full bg-red-100 text-xs font-normal text-red-600 hover:bg-red-100'>
-    //                   Needs Review
-    //                 </Badge>
-    //               )}
-
-    //               {draft.status === 'In Progress' && (
-    //                 <Badge className='rounded-full bg-green-100 text-xs font-normal text-green-700 hover:bg-green-100'>
-    //                   In Progress
-    //                 </Badge>
-    //               )}
-    //             </div>
-
-    //             <Button
-    //               variant='ghost'
-    //               className='p-0 text-xs font-normal text-gold-light hover:bg-transparent hover:text-gold/50'
-    //             >
-    //               Continue →
-    //             </Button>
-    //           </CardFooter>
-    //         </CardContent>
-    //       </Card>
-    //     ))}
-    //   </div>
-    // </div>
   )
 }

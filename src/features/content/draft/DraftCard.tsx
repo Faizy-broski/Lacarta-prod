@@ -4,7 +4,7 @@ import { FilePen, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { fetchArticles, type Article } from '@/lib/services/articles.service'
 import { useAuthStore } from '@/lib/auth/auth.store'
 
@@ -23,23 +23,15 @@ export default function DraftCard() {
     const isContentRole = ['owner', 'admin', 'assistant', 'editor'].includes(user?.role?.[0] ?? '')
     fetchArticles({
       status: 'draft',
-      // Editors only see their own drafts; others see all
-      author_id: user?.role?.[0] === 'editor' ? user?.accountNo : undefined,
       limit: 6,
-    }).then((data) => {
-      setDrafts(data)
+    }).then(({ articles }) => {
+      setDrafts(articles)
       setLoading(false)
     })
   }, [user])
 
   return (
-    <Card className='mt-5 border-0 p-0 shadow-none'>
-      <CardHeader className='flex flex-row items-center justify-between px-0'>
-        <CardTitle className='font-antigua text-xl'>Drafts</CardTitle>
-        <Button variant='link' className='text-amber-400'>
-          View All →
-        </Button>
-      </CardHeader>
+    <Card className='border-0 p-0 shadow-none'>
       <CardContent className='px-0'>
         {loading ? (
           <div className='flex items-center justify-center py-12'>

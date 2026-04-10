@@ -75,71 +75,7 @@ const thumbnails = [
   "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800",
 ];
 
-const sliderPlaces = [
-  {
-    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800",
-    category: "Foodie",
-    title: "LA GRANDE – MONT ROYAL",
-    subtitle: "Best French Breakfast",
-    rating: 4.5,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800",
-    category: "Grill",
-    title: "THE BULL HOUSE",
-    subtitle: "Premium Steak & BBQ",
-    rating: 4.2,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
-    category: "Asian Fusion",
-    title: "KARAMI FUSION",
-    subtitle: "Modern Pan-Asian Cuisine",
-    rating: 4.7,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800",
-    category: "Italian",
-    title: "BELLA NAPOLI",
-    subtitle: "Authentic Wood-Fired Pizza",
-    rating: 4.8,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1529042410759-befb1204b468?w=800",
-    category: "Cafe",
-    title: "URBAN BREW",
-    subtitle: "Specialty Coffee & Brunch",
-    rating: 4.3,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800",
-    category: "Fine Dining",
-    title: "L'ÉTOILE",
-    subtitle: "Contemporary French Cuisine",
-    rating: 4.9,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=800",
-    category: "Desserts",
-    title: "SWEET HAVEN",
-    subtitle: "Artisan Cakes & Pastries",
-    rating: 4.1,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=800",
-    category: "Fast Food",
-    title: "STACK BURGERS",
-    subtitle: "Gourmet Smash Burgers",
-    rating: 4.4,
-  },
-  {
-    image: "https://images.unsplash.com/photo-1499028344343-cd173ffc68a9?w=800",
-    category: "Seafood",
-    title: "BLUE OCEAN",
-    subtitle: "Fresh Catch Daily",
-    rating: 4.6,
-  },
-];
+const sliderPlaces = [];
 
 const dealsSlides = [
   {
@@ -1709,25 +1645,21 @@ export default function GastronomyDetails() {
       {/* ══ SECTION 5: AROUND THIS PLACE ══ */}
       <div className="px-4 sm:px-6 md:px-10 lg:px-12 pb-6 md:pb-8">
         <div className="mx-auto max-w-[1200px]">
-          <div className="flex items-end justify-between flex-col  w-full mb-4 md:mb-5">
-            <div className="w-full">
-              <p className="text-[10px] md:text-xs uppercase w-full text-center tracking-widest font-medium text-black/70 mb-0.5">
-                Explore
-              </p>
-              <h2 className="text-xl md:text-2xl font-extrabold text-center font-antigua text-black">
-                Around This Place
-              </h2>
-            </div>
-            <div className="flex flex-1 gap-1.5 md:gap-2">
-              <button className="bg-gradient-to-b from-red to-red-light text-white text-[10px] md:text-xs font-bold rounded-full px-3 md:px-4 py-1.5 md:py-2 hover:bg-red transition">
-                Clear Filters
-              </button>
-              <button className="bg-gradient-to-r from-green to-green-light text-white text-[10px] md:text-xs font-bold rounded-full px-3 md:px-4 py-1.5 md:py-2 hover:bg-green transition">
-                + Filters
-              </button>
-            </div>
+          <div className="w-full mb-4 md:mb-5">
+            <p className="text-[10px] md:text-xs uppercase w-full text-center tracking-widest font-medium text-black/70 mb-0.5">
+              Explore
+            </p>
+            <h2 className="text-xl md:text-2xl font-extrabold text-center font-antigua text-black">
+              Around This Place
+            </h2>
           </div>
-          <HorizontalSlider items={sliderPlaces} />
+          <div className="flex flex-col items-center justify-center py-10 text-center text-black/50 gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+            </svg>
+            <p className="text-sm font-medium">No listings found in this neighbourhood yet.</p>
+          </div>
         </div>
       </div>
 

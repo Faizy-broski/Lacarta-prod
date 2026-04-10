@@ -12,6 +12,7 @@ import Insights from './components/Insights'
 import UpcomingEvents from './components/UpcomingEvents'
 import PendingEvents from './components/PendingEvents'
 import TabsPage from './components/tabs.tsx'
+import CreateEventDialog from './components/CreateEventDialog'
 import { fetchEvents } from '@/lib/services/events.service'
 
 export function Events() {
@@ -38,13 +39,28 @@ export function Events() {
       <Header />
 
       <Main>
-        <div className='mb-2 space-y-1'>
-          <h1 className='font-antigua text-3xl font-bold tracking-tight'>
-            Events & Calendar
-          </h1>
-          <p className='text-xs text-muted-foreground'>
-            Manage cultural events and calendar visibility.
-          </p>
+        <div className='mb-2 flex items-start justify-between gap-4'>
+          <div className='space-y-1'>
+            <h1 className='font-antigua text-3xl font-bold tracking-tight'>
+              Events & Calendar
+            </h1>
+            <p className='text-xs text-muted-foreground'>
+              Manage cultural events and calendar visibility.
+            </p>
+          </div>
+          <CreateEventDialog onCreated={() => {
+            fetchEvents({ status: 'published' }).then((events) => {
+              setCalendarEvents(
+                events.map((e) => ({
+                  id: e.id,
+                  title: e.title,
+                  date: e.event_date,
+                  time: e.start_time ?? undefined,
+                  category: e.category?.name,
+                }))
+              )
+            })
+          }} />
         </div>
 
         <Tabs

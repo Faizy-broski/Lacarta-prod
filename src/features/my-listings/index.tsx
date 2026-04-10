@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Building2, MapPin, Clock, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Building2, MapPin, Clock, Loader2, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,8 +22,16 @@ const statusColors: Record<string, string> = {
   featured: 'bg-[#CF9921]/10 text-[#CF9921] border-[#CF9921]/30',
 }
 
+const tierColors: Record<string, string> = {
+  free: 'bg-slate-50 text-slate-600 border-slate-200',
+  standard: 'bg-blue-50 text-blue-700 border-blue-200',
+  premium: 'bg-amber-50 text-amber-700 border-amber-200',
+  elite: 'bg-purple-50 text-purple-700 border-purple-200',
+}
+
 export function MyListingsPage() {
   const user = useAuthStore((s) => s.user)
+  const router = useRouter()
   const [listings, setListings] = useState<ClientListing[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -62,6 +71,14 @@ export function MyListingsPage() {
             {hasAnyListingAt('premium') && (
               <CreateDealModal listings={listings} onCreated={loadListings} />
             )}
+            <Button
+              size='sm'
+              className='h-8 gap-1.5 bg-[#CF9921] text-white hover:bg-[#b8881e]'
+              onClick={() => router.push('/dashboard/listings/create')}
+            >
+              <Plus className='h-3.5 w-3.5' />
+              Create Listing
+            </Button>
             <Badge variant='secondary' className='gap-1'>
               <Building2 className='h-3 w-3' />
               {loading ? '…' : listings.length} listings
@@ -93,6 +110,12 @@ export function MyListingsPage() {
                       <Badge className={`border text-[10px] ${statusColors[listing.status] ?? ''}`} variant='outline'>
                         {listing.status}
                       </Badge>
+                      <Badge
+                        className={`border text-[10px] capitalize ${tierColors[listing.subscription_tier ?? 'free'] ?? tierColors.free}`}
+                        variant='outline'
+                      >
+                        {listing.subscription_tier ?? 'free'}
+                      </Badge>
                     </div>
                     <h2 className='font-antigua text-base font-semibold leading-snug tracking-tight'>
                       {listing.title}
@@ -118,6 +141,7 @@ export function MyListingsPage() {
                       size='sm'
                       variant='outline'
                       className='h-7 px-3 text-xs hover:border-[#CF9921] hover:text-[#CF9921]'
+                      onClick={() => router.push(`/dashboard/listings/${listing.id}/edit`)}
                     >
                       Manage
                     </Button>

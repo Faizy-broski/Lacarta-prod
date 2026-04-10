@@ -1,7 +1,22 @@
+'use client'
 import Link from 'next/link'
+import { useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { UserAuthForm } from './components/user-auth-form'
 
 export function SignIn() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect') ?? undefined
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const hash = window.location.hash ?? ''
+    if (hash.includes('type=invite')) {
+      router.replace(`/invite-accept${hash}`)
+    }
+  }, [router])
+
   return (
     <div className='space-y-6'>
       <div className='space-y-2'>
@@ -13,7 +28,7 @@ export function SignIn() {
         </p>
       </div>
 
-      <UserAuthForm />
+      <UserAuthForm redirectTo={redirectTo} />
 
       <p className='text-center text-sm text-muted-foreground'>
         Don&apos;t have an account?{' '}

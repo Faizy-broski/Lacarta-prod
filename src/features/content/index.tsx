@@ -7,6 +7,8 @@
 //   TabsContent,
 //   // TabsList, TabsTrigger
 // } from '@/components/ui/tabs'
+'use client'
+import { useRouter } from 'next/navigation'
 import { Compass, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Header } from '@/components/layout/header'
@@ -49,6 +51,7 @@ import { Main } from '@/components/layout/main'
 // ]
 
 export function ContentPage({ children }: { children?: React.ReactNode }) {
+  const router = useRouter()
   return (
     <>
       {/* ===== Top Heading ===== */}
@@ -69,7 +72,7 @@ export function ContentPage({ children }: { children?: React.ReactNode }) {
               <Compass />
               Travel Tool
             </Button>
-            <Button className='bg-gradient-to-r from-[#CF9921] to-[#D2BB6B] text-white shadow hover:bg-black hover:text-white'>
+            <Button className='bg-gradient-to-r from-[#CF9921] to-[#D2BB6B] text-white shadow hover:bg-black hover:text-white' onClick={() => router.push('/dashboard/content/articles/create')}>
               <Plus size={30} /> New Article
             </Button>
           </div>

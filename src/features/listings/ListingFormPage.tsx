@@ -1,12 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import Highlight from '@tiptap/extension-highlight'
-import Image from '@tiptap/extension-image'
-import Link from '@tiptap/extension-link'
-import TextAlign from '@tiptap/extension-text-align'
-import Underline from '@tiptap/extension-underline'
-import { EditorContent, useEditor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import {
   ArrowLeft,
   Plus,
@@ -36,7 +30,7 @@ import {
   X,
   Star,
 } from 'lucide-react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -71,6 +65,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { useListingPlan } from '@/lib/hooks/useListingPlan'
+import { getCategoryGroup, getRequiredTier } from '@/lib/constants/plan-features'
+import { LockedSection } from '@/components/locked-section'
 
 // import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor'
 
@@ -271,7 +267,7 @@ const EMPTY_FORM: ListingForm = {
   cover_image: '',
   category_id: '',
   sub_category_id: '',
-  status: 'pending',
+  status: 'active',
   category_tags: [],
   seo_slug: '',
   images: [],
@@ -1055,13 +1051,13 @@ function DealsEditor({
               className='mb-2 rounded-md'
             />
             <div className='space-y-2'>
-              {deal.experience_included.map((exp, ei) => (
+              {(deal.experience_included ?? []).map((exp, ei) => (
                 <div key={ei} className='flex gap-2'>
                   <Input
                     placeholder='Image URL'
                     value={exp.image}
                     onChange={(e) => {
-                      const updated = deal.experience_included.map((x, xi) =>
+                      const updated = (deal.experience_included ?? []).map((x, xi) =>
                         xi === ei ? { ...x, image: e.target.value } : x
                       )
                       update(i, 'experience_included', updated)
@@ -1072,7 +1068,7 @@ function DealsEditor({
                     placeholder='Title'
                     value={exp.title}
                     onChange={(e) => {
-                      const updated = deal.experience_included.map((x, xi) =>
+                      const updated = (deal.experience_included ?? []).map((x, xi) =>
                         xi === ei ? { ...x, title: e.target.value } : x
                       )
                       update(i, 'experience_included', updated)
@@ -1084,7 +1080,7 @@ function DealsEditor({
                     placeholder='URL'
                     value={exp.url}
                     onChange={(e) => {
-                      const updated = deal.experience_included.map((x, xi) =>
+                      const updated = (deal.experience_included ?? []).map((x, xi) =>
                         xi === ei ? { ...x, url: e.target.value } : x
                       )
                       update(i, 'experience_included', updated)
@@ -1093,14 +1089,14 @@ function DealsEditor({
                   />
                   <Button
                     type='button' variant='ghost' size='icon' className='h-9 w-9 shrink-0'
-                    onClick={() => update(i, 'experience_included', deal.experience_included.filter((_, xi) => xi !== ei))}
+                    onClick={() => update(i, 'experience_included', (deal.experience_included ?? []).filter((_, xi) => xi !== ei))}
                   >
                     <Trash2 className='h-3.5 w-3.5 text-muted-foreground' />
                   </Button>
                 </div>
               ))}
               <AddButton
-                onClick={() => update(i, 'experience_included', [...deal.experience_included, { image: '', title: '', url: '' }])}
+                onClick={() => update(i, 'experience_included', [...(deal.experience_included ?? []), { image: '', title: '', url: '' }])}
               >
                 Add Experience Item
               </AddButton>
@@ -1183,31 +1179,39 @@ function WeeklyHoursEditor({
   onChange: (v: WeeklyHours) => void
 }) {
   const toggleDay = (day: string) =>
-    onChange({ ...hours, [day]: { ...hours[day], open: !hours[day].open } })
+    onChange({ ...hours, [day]: { ...normalizedHours[day], open: !normalizedHours[day].open } })
+  const normalizedHours: WeeklyHours = DAYS.reduce((acc, day) => {
+    acc[day] = hours[day] ?? { open: false, slots: [{ start: '', end: '' }] }
+    return acc
+  }, {} as WeeklyHours)
+
   const updateSlot = (
     day: string,
     si: number,
     field: keyof WeeklySlot,
     val: string
   ) => {
-    const slots = hours[day].slots.map((s, i) =>
+    const dayData = normalizedHours[day]
+    const slots = dayData.slots.map((s, i) =>
       i === si ? { ...s, [field]: val } : s
     )
-    onChange({ ...hours, [day]: { ...hours[day], slots } })
+    onChange({ ...hours, [day]: { ...dayData, slots } })
   }
   const addSlot = (day: string) => {
-    if (hours[day].slots.length >= 2) return
+    const dayData = normalizedHours[day]
+    if (dayData.slots.length >= 2) return
     onChange({
       ...hours,
       [day]: {
-        ...hours[day],
-        slots: [...hours[day].slots, { start: '', end: '' }],
+        ...dayData,
+        slots: [...dayData.slots, { start: '', end: '' }],
       },
     })
   }
   const removeSlot = (day: string, si: number) => {
-    const slots = hours[day].slots.filter((_, i) => i !== si)
-    onChange({ ...hours, [day]: { ...hours[day], slots } })
+    const dayData = normalizedHours[day]
+    const slots = dayData.slots.filter((_, i) => i !== si)
+    onChange({ ...hours, [day]: { ...dayData, slots } })
   }
   return (
     <div className='space-y-2'>
@@ -1216,7 +1220,7 @@ function WeeklyHoursEditor({
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-3'>
               <Switch
-                checked={hours[day].open}
+                checked={normalizedHours[day].open}
                 onCheckedChange={() => toggleDay(day)}
               />
               <span className='text-sm font-medium capitalize'>{day}</span>
@@ -1224,15 +1228,15 @@ function WeeklyHoursEditor({
             <span
               className={cn(
                 'text-xs',
-                hours[day].open ? 'text-green-600' : 'text-muted-foreground'
+                normalizedHours[day].open ? 'text-green-600' : 'text-muted-foreground'
               )}
             >
-              {hours[day].open ? 'Open' : 'Closed'}
+              {normalizedHours[day].open ? 'Open' : 'Closed'}
             </span>
           </div>
-          {hours[day].open && (
+          {normalizedHours[day].open && (
             <div className='mt-3 space-y-2'>
-              {hours[day].slots.map((slot, si) => (
+              {normalizedHours[day].slots.map((slot, si) => (
                 <div key={si} className='flex items-center gap-2'>
                   <Input
                     type='time'
@@ -1249,7 +1253,7 @@ function WeeklyHoursEditor({
                     onChange={(e) => updateSlot(day, si, 'end', e.target.value)}
                     className='rounded-md'
                   />
-                  {hours[day].slots.length > 1 && (
+                  {normalizedHours[day].slots.length > 1 && (
                     <Button
                       type='button'
                       variant='ghost'
@@ -1262,7 +1266,7 @@ function WeeklyHoursEditor({
                   )}
                 </div>
               ))}
-              {hours[day].slots.length < 2 && (
+              {normalizedHours[day].slots.length < 2 && (
                 <Button
                   type='button'
                   variant='ghost'
@@ -1582,323 +1586,15 @@ function MenuEditor({
 
 // ─── Rich Text Editor ────────────────────────────────────────────────────────
 
-// function RichTextEditor({
-//   value,
-//   onChange,
-// }: {
-//   value: string
-//   onChange: (v: string) => void
-// }) {
-//   const editorRef = useRef<HTMLDivElement>(null)
-//   const lastSynced = useRef('')
-
-//   // Sync external value into DOM only when it changes from outside (e.g. load from DB)
-//   useEffect(() => {
-//     if (editorRef.current && value !== lastSynced.current) {
-//       editorRef.current.innerHTML = value
-//       lastSynced.current = value
-//     }
-//   }, [value])
-
-//   const exec = (cmd: string, arg?: string) => {
-//     document.execCommand(cmd, false, arg)
-//     if (editorRef.current) {
-//       const html = editorRef.current.innerHTML
-//       lastSynced.current = html
-//       onChange(html)
-//     }
-//     editorRef.current?.focus()
-//   }
-
-//   const ToolBtn = ({
-//     cmd,
-//     arg,
-//     label,
-//     title,
-//   }: {
-//     cmd: string
-//     arg?: string
-//     label: React.ReactNode
-//     title: string
-//   }) => (
-//     <button
-//       type='button'
-//       title={title}
-//       onMouseDown={(e) => {
-//         e.preventDefault()
-//         exec(cmd, arg)
-//       }}
-//       className='flex h-7 min-w-[28px] items-center justify-center rounded px-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground'
-//     >
-//       {label}
-//     </button>
-//   )
-
-//   return (
-//     <div className='relative rounded-md border focus-within:ring-1 focus-within:ring-ring'>
-//       <div className='flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5'>
-//         <ToolBtn cmd='bold' title='Bold' label={<strong>B</strong>} />
-//         <ToolBtn cmd='italic' title='Italic' label={<em>I</em>} />
-//         <ToolBtn
-//           cmd='underline'
-//           title='Underline'
-//           label={<span className='underline'>U</span>}
-//         />
-//         <div className='mx-1 h-4 w-px bg-border' />
-//         <ToolBtn cmd='insertUnorderedList' title='Bullet list' label='• list' />
-//         <ToolBtn
-//           cmd='insertOrderedList'
-//           title='Numbered list'
-//           label='1. list'
-//         />
-//         <div className='mx-1 h-4 w-px bg-border' />
-//         <ToolBtn
-//           cmd='formatBlock'
-//           arg='h3'
-//           title='Heading'
-//           label={<span className='font-semibold'>H3</span>}
-//         />
-//         <ToolBtn cmd='formatBlock' arg='p' title='Normal text' label='¶' />
-//         <div className='ml-auto'>
-//           <ToolBtn cmd='removeFormat' title='Clear formatting' label='Clear' />
-//         </div>
-//       </div>
-//       <div
-//         ref={editorRef}
-//         contentEditable
-//         suppressContentEditableWarning
-//         onInput={() => {
-//           if (editorRef.current) {
-//             const html = editorRef.current.innerHTML
-//             lastSynced.current = html
-//             onChange(html)
-//           }
-//         }}
-//         className='prose prose-sm min-h-[180px] max-w-none cursor-text p-3 text-sm outline-none [&_h3]:mb-1 [&_h3]:text-base [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5'
-//       />
-//       {!value && (
-//         <p className='pointer-events-none absolute top-12 left-3 text-sm text-muted-foreground/50'>
-//           Write a detailed description…
-//         </p>
-//       )}
-//     </div>
-//   )
-// }
-function RichTextEditor({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (v: string) => void
-}) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      Link.configure({
-        openOnClick: false,
-      }),
-      Image,
-      Highlight,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-    ],
-    content: value,
-    editorProps: {
-      attributes: {
-        class:
-          'prose prose-sm max-w-none min-h-[180px] p-3 text-sm outline-none',
-      },
-    },
-    onUpdate({ editor }: any) {
-      onChange(editor.getHTML())
-    },
-    immediatelyRender: false,
-  })
-
-  useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value)
-    }
-  }, [value, editor])
-
-  if (!editor) return null
-
-  const ToolBtn = ({
-    onClick,
-    label,
-    title,
-  }: {
-    onClick: () => void
-    label: React.ReactNode
-    title: string
-  }) => (
-    <button
-      type='button'
-      title={title}
-      onMouseDown={(e) => {
-        e.preventDefault()
-        onClick()
-      }}
-      className='flex h-7 min-w-[28px] items-center justify-center rounded px-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground'
-    >
-      {label}
-    </button>
-  )
-
-  const setLink = () => {
-    const url = prompt('Enter URL')
-    if (url) {
-      editor.chain().focus().setLink({ href: url }).run()
-    }
-  }
-
-  return (
-    <div className='rounded-md border focus-within:ring-1 focus-within:ring-ring'>
-      <div className='flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5'>
-        <ToolBtn
-          title='Bold'
-          label={<strong>B</strong>}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        />
-
-        <ToolBtn
-          title='Italic'
-          label={<em>I</em>}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        />
-
-        <ToolBtn
-          title='Underline'
-          label={<span className='underline'>U</span>}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-        />
-
-        <ToolBtn
-          title='Strike'
-          label={<span className='strike'>S</span>}
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-        />
-
-        <div className='mx-1 h-4 w-px bg-border' />
-
-        {/* <ToolBtn
-          title='Heading 1'
-          label='H1'
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        />
-
-        <ToolBtn
-          title='Heading 2'
-          label='H2'
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        />
-
-        <ToolBtn
-          title='Heading 3'
-          label='H3'
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 3 }).run()
-          }
-        />
-
-        <ToolBtn
-          title='Paragraph'
-          label='¶'
-          onClick={() => editor.chain().focus().setParagraph().run()}
-        />
-
-        <div className='mx-1 h-4 w-px bg-border' />
-
-        <ToolBtn
-          title='Bullet List'
-          label='• list'
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-        />
-
-        <ToolBtn
-          title='Numbered List'
-          label='1. list'
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        />
-
-        <ToolBtn
-          title='Blockquote'
-          label='❝'
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        /> */}
-
-        <ToolBtn
-          title='Code Block'
-          label='</>'
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        />
-
-        {/* <div className='mx-1 h-4 w-px bg-border' />
-        <ToolBtn
-          title='Align Left'
-          label='⬅'
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-        />
-
-        <ToolBtn
-          title='Align Center'
-          label='⬌'
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
-        />
-
-        <ToolBtn
-          title='Align Right'
-          label='➡'
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
-        />
-
-        <div className='mx-1 h-4 w-px bg-border' /> */}
-
-        <ToolBtn
-          title='Highlight'
-          label='🖍'
-          onClick={() => editor.chain().focus().toggleHighlight().run()}
-        />
-
-        <ToolBtn title='Add Link' label='🔗' onClick={setLink} />
-
-        <div className='ml-auto flex gap-1'>
-          <ToolBtn
-            title='Undo'
-            label='↺'
-            onClick={() => editor.chain().focus().undo().run()}
-          />
-
-          <ToolBtn
-            title='Redo'
-            label='↻'
-            onClick={() => editor.chain().focus().redo().run()}
-          />
-
-          <div className='ml-auto'>
-            <ToolBtn
-              title='Clear formatting'
-              label='Clear'
-              onClick={() =>
-                editor.chain().focus().clearNodes().unsetAllMarks().run()
-              }
-            />
-          </div>
-        </div>
-      </div>
-      <EditorContent editor={editor} />
-      {/* <SimpleEditor /> */}
-    </div>
-  )
-}
+// ─── Rich Text Editor — now a shared component ───────────────────────────────
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = {}) {
   const router = useRouter()
   const { id } = useParams<{ id?: string }>()
+  const searchParams = useSearchParams()
+  const prefillCategoryId = searchParams.get('category_id') ?? undefined
   const isEdit = !!id
 
   const [form, setForm] = useState<ListingForm>(EMPTY_FORM)
@@ -1912,15 +1608,24 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>('client')
 
-  // If fixedCategory is set, auto-select and lock the category
+  // Pre-select category from URL param (UUID) or fixedCategory prop (name slug)
   useEffect(() => {
+    if (isEdit) return
+    if (prefillCategoryId) {
+      setForm(prev => prev.category_id === prefillCategoryId ? prev : { ...prev, category_id: prefillCategoryId })
+      return
+    }
     if (fixedCategory && categories.length > 0) {
-      const cat = categories.find(c => c.name.toLowerCase() === fixedCategory.toLowerCase())
+      const slugify = (s: string) => s.toLowerCase().replace(/[\s-]+/g, '_')
+      const cat = categories.find(c =>
+        c.name.toLowerCase() === fixedCategory.toLowerCase() ||
+        slugify(c.name) === slugify(fixedCategory)
+      )
       if (cat && form.category_id !== cat.id) {
         setForm(prev => ({ ...prev, category_id: cat.id }))
       }
     }
-  }, [fixedCategory, categories])
+  }, [prefillCategoryId, fixedCategory, categories, isEdit])
 
   const set = useCallback(
     <K extends keyof ListingForm>(field: K, value: ListingForm[K]) => {
@@ -1943,7 +1648,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
         .then(({ data }) => {
           const role: string = data?.role ?? 'client'
           setCurrentUserRole(role)
-          if (!isEdit && (role === 'owner' || role === 'admin')) {
+          if (!isEdit) {
             setForm((prev) => ({ ...prev, status: 'active' }))
           }
         })
@@ -1962,6 +1667,9 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
   const isGastronomy = selectedCategoryName.includes('gastronom')
   const isRealEstate = selectedCategoryName.includes('real estate')
   const isHotel      = !isActivities && !isBeach && !isGastronomy && !isRealEstate && !!form.category_id
+
+  // Category group for plan-feature lookups
+  const categoryGroup = getCategoryGroup(selectedCategory?.name ?? '')
 
   // ── Plan enforcement ──
   const { hasFeature } = useListingPlan(
@@ -1993,6 +1701,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
     supabase
       .from('categories')
       .select('id, name')
+      .eq('type', 'listing')
       .order('name')
       .then(({ data }) => setCategories(data ?? []))
   }, [])
@@ -2008,7 +1717,23 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
       .select('id, name')
       .eq('category', form.category_id)
       .order('name')
-      .then(({ data }) => setSubCategories(data ?? []))
+      .then(({ data, error }) => {
+        if (error) console.error('[sub-categories fetch]', error)
+        setSubCategories(data ?? [])
+      })
+  }, [form.category_id])
+
+  // ── Fetch listing types (frontend filter tags) when category changes ──
+  const [listingTypes, setListingTypes] = useState<{ id: number; name: string }[]>([])
+  useEffect(() => {
+    if (!form.category_id) { setListingTypes([]); return }
+    supabase
+      .from('listing_types')
+      .select('id, name')
+      .eq('category', form.category_id)
+      .eq('status', 'active')
+      .order('name')
+      .then(({ data }) => setListingTypes(data ?? []))
   }, [form.category_id])
 
   // ── Fetch category attributes when category changes ──
@@ -2089,6 +1814,8 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
             faqs: data.faqs ?? [],
             deals: data.deals ?? [],
             road_map: data.road_map ?? [],
+            whats_included: data.whats_included ?? { title: '', items: [] },
+            important_info: data.important_info ?? { title: '', items: [] },
             travel_tips: data.travel_tips ?? [],
             key_features: data.key_features ?? [],
             services: data.services ?? [],
@@ -2167,20 +1894,22 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
     if (!form.subtitle.trim()) errs.subtitle = 'Subtitle is required'
     if (!form.cover_image)
       errs.cover_image = 'Featured image is required — please upload a photo'
-    if (!form.price_from || Number(form.price_from) < 0)
+    if (!isRealEstate && (!form.price_from || Number(form.price_from) < 0))
       errs.price_from = 'Start price is required'
-    const hasSocial =
-      !!form.facebook.trim() ||
-      !!form.instagram.trim() ||
-      form.extra_social_links.some((l) => !!l.url.trim())
-    if (!hasSocial)
-      errs.social =
-        'At least one social link is required (Facebook, Instagram, or other)'
-    if (!form.category_tags.length)
-      errs.category_tags = 'Select at least one category tag'
+    if (hasFeature('social_handles')) {
+      const hasSocial =
+        !!form.facebook.trim() ||
+        !!form.instagram.trim() ||
+        form.extra_social_links.some((l) => !!l.url.trim())
+      if (!hasSocial)
+        errs.social =
+          'At least one social link is required (Facebook, Instagram, or other)'
+    }
+    if (listingTypes.length > 0 && !form.category_tags.length)
+      errs.category_tags = 'Select at least one type'
     if (!form.seo_slug.trim()) errs.seo_slug = 'SEO slug is required'
     if (!form.category_id) errs.category_id = 'Category is required'
-    if (!form.sub_category_id) errs.sub_category_id = 'Sub-category is required'
+    if (subCategories.length > 0 && !form.sub_category_id) errs.sub_category_id = 'Sub-category is required'
     if (!form.neighborhoods.length)
       errs.neighborhoods = 'Select one neighborhood'
     if (form.neighborhoods.length > 1)
@@ -2191,6 +1920,12 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
       errs.facebook = 'Must be a valid URL (https://…)'
     if (form.instagram && !isValidUrl(form.instagram))
       errs.instagram = 'Must be a valid URL (https://…)'
+    const hasLocation =
+      !!form.address.trim() ||
+      (!!form.latitude.trim() && !!form.longitude.trim()) ||
+      !!form.google_maps_link.trim()
+    if (!hasLocation)
+      errs.address = 'Location is required — enter an address or GPS coordinates'
     setErrors(errs)
     if (Object.keys(errs).length > 0) {
       toast.error('Please fix the highlighted fields', {
@@ -2259,7 +1994,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
       travel_duration: form.travel_duration || null,
       beach_start: form.beach_start || null,
       beach_end: form.beach_end || null,
-      weekly_hours: (isGastronomy || isHotel) ? form.weekly_hours : null,
+      weekly_hours: (isGastronomy || isHotel) ? form.weekly_hours : {},
       faqs: form.faqs,
       deals: form.deals,
       road_map: form.road_map,
@@ -2285,14 +2020,16 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
       menu_button_title: isGastronomy ? (form.menu_button_title || null) : null,
       hours_status: (isGastronomy || isHotel) ? (form.hours_status || null) : null,
       hours_note: (isGastronomy || isHotel) ? (form.hours_note || null) : null,
-      book_with_us: (isGastronomy || isHotel || isBeach || isBoating) ? form.book_with_us : null,
+      book_with_us: (isGastronomy || isHotel || isBeach || isBoating) ? form.book_with_us : {},
       availability_button_title: form.availability_button_title || null,
       rnt_no: form.rnt_no || null,
       inventory: form.inventory || null,
       also_available_on: (isGastronomy || isActivities) ? form.also_available_on : [],
+      whats_included: (isBoating || isGastronomy || isActivities) ? form.whats_included : {},
+      important_info: (isBoating || isGastronomy || isActivities) ? form.important_info : {},
       featured_in: isGastronomy ? form.featured_in : [],
       direct_links: (isHotel || isBeach || isBoating) ? form.direct_links : [],
-      boating_info: isBoating ? form.boating_info : null,
+      boating_info: isBoating ? form.boating_info : {},
       room_types: isHotel ? form.room_types : [],
       room_types_title: isHotel ? (form.room_types_title.trim() || null) : null,
       // Real Estate
@@ -2303,27 +2040,40 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
       strata: isRealEstate && form.strata !== '' ? Number(form.strata) : null,
       availability_status: isRealEstate ? form.availability_status : null,
       unit_specs: isRealEstate ? (form.unit_specs || null) : null,
-      developer_info: isRealEstate ? form.developer_info : null,
-      appointment_info: isRealEstate ? form.appointment_info : null,
-      website_cta: isRealEstate ? form.website_cta : null,
+      developer_info: isRealEstate ? form.developer_info : {},
+      appointment_info: isRealEstate ? form.appointment_info : {},
+      website_cta: isRealEstate ? form.website_cta : {},
       blueprint_url: isRealEstate ? (form.blueprint_url || null) : null,
       video_urls: isRealEstate ? form.video_urls : [],
     }
     if (!isEdit && currentUserId) payload.client_id = currentUserId
 
     let error: { message: string } | null = null
+    let newId: string | null = null
     if (isEdit) {
       ;({ error } = await supabase
         .from('listings')
         .update(payload)
         .eq('id', id!))
     } else {
-      ;({ error } = await supabase.from('listings').insert(payload))
+      const { data: inserted, error: insertError } = await supabase
+        .from('listings')
+        .insert(payload)
+        .select('id')
+        .single()
+      error = insertError
+      newId = inserted?.id ?? null
     }
     setSaving(false)
     if (!error) {
       toast.success(isEdit ? 'Listing updated' : 'Listing created')
-      router.push('/dashboard/listings')
+      if (isEdit) {
+        router.back()
+      } else if (newId) {
+        router.push(`/dashboard/listings/${newId}`)
+      } else {
+        router.back()
+      }
     } else {
       toast.error('Failed to save listing', { description: error.message })
     }
@@ -2357,7 +2107,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 variant='ghost'
                 size='icon'
                 className='shrink-0 rounded-md'
-                onClick={() => router.push('/dashboard/listings')}
+                onClick={() => router.back()}
               >
                 <ArrowLeft className='h-4 w-4' />
               </Button>
@@ -2396,7 +2146,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 variant='outline'
                 size='sm'
                 className='rounded-md'
-                onClick={() => router.push('/dashboard/listings')}
+                onClick={() => router.back()}
               >
                 Cancel
               </Button>
@@ -2459,10 +2209,17 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
               />
             </FormField>
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-              {fixedCategory ? (
+              {(fixedCategory || prefillCategoryId) ? (
                 <FormField label='Category' required error={errors.category_id}>
-                  <div className='flex items-center gap-2'>
-                    <span className='font-semibold capitalize'>{fixedCategory.replace('_', ' ')}</span>
+                  <div className={cn(
+                    'flex h-9 w-full items-center justify-between rounded-md border border-input bg-muted/50 px-3 py-2 text-sm cursor-not-allowed opacity-70'
+                  )}>
+                    <span className='capitalize'>
+                      {selectedCategory?.name ?? fixedCategory?.replace(/_/g, ' ') ?? '…'}
+                    </span>
+                    <svg className='h-4 w-4 text-muted-foreground shrink-0' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
+                    </svg>
                   </div>
                 </FormField>
               ) : (
@@ -2500,7 +2257,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
               )}
               <FormField
                 label='Sub-Category'
-                required
+                required={subCategories.length > 0}
                 error={errors.sub_category_id}
               >
                 <Select
@@ -2580,7 +2337,12 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
           </SectionCard>
 
           {/* S2 — Description & Story (Standard+) */}
-          {hasFeature(isRealEstate ? 're_full_description' : 'about_description') && (
+          <LockedSection
+            hasAccess={hasFeature(isRealEstate ? 're_full_description' : 'about_description')}
+            requiredTier={getRequiredTier(categoryGroup, isRealEstate ? 're_full_description' : 'about_description') ?? 'standard'}
+            feature='Description & Story'
+            listingId={id}
+          >
             <SectionCard
               icon={<FileText className='h-5 w-5' />}
               title='Description & Story'
@@ -2591,7 +2353,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 onChange={(v) => set('description', v)}
               />
             </SectionCard>
-          )}
+          </LockedSection>
 
           {/* S3 — Image Gallery */}
           <SectionCard
@@ -2617,8 +2379,13 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 error={errors.cover_image}
               />
             </FormField>
-            {hasFeature('gallery') && (
-              <>
+            <LockedSection
+              hasAccess={hasFeature('gallery')}
+              requiredTier='standard'
+              feature='Photo Gallery'
+              listingId={id}
+            >
+              <div>
                 <Separator />
                 <FormField
                   label='Photo Gallery'
@@ -2631,8 +2398,8 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                     disabled={!form.category_id}
                   />
                 </FormField>
-              </>
-            )}
+              </div>
+            </LockedSection>
           </SectionCard>
 
           {/* Real Estate Specs (FREE for RE only) */}
@@ -2723,28 +2490,64 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                   className='rounded-md'
                 />
               </FormField>
+              <Separator />
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <FormField label='Price From ($)' hint='Asking price or minimum rent'>
+                  <div className='relative'>
+                    <DollarSign className='absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                    <Input
+                      type='number'
+                      placeholder='0'
+                      min={0}
+                      step={0.01}
+                      value={form.price_from}
+                      onChange={(e) => set('price_from', e.target.value)}
+                      className='rounded-md pl-9'
+                    />
+                  </div>
+                </FormField>
+                <FormField label='Price To ($)' hint='Maximum price or leave blank'>
+                  <div className='relative'>
+                    <DollarSign className='absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                    <Input
+                      type='number'
+                      placeholder='0'
+                      min={0}
+                      step={0.01}
+                      value={form.price_to}
+                      onChange={(e) => set('price_to', e.target.value)}
+                      className='rounded-md pl-9'
+                    />
+                  </div>
+                </FormField>
+              </div>
             </SectionCard>
           )}
 
           {/* S4 — Categorization */}
           <SectionCard
             icon={<Sparkles className='h-5 w-5' />}
-            title='Ammenities & Features'
-            description='Tags and attributes loaded from the selected category'
+            title='Amenities & Features'
+            description='Type tags and attributes loaded from the selected category'
           >
             <FormField
-              label='Category Tags'
-              required
+              label='Type'
+              required={listingTypes.length > 0}
               error={errors.category_tags}
-              hint='Select the sub-category tags that apply to this listing'
+              hint='Select the types that apply to this listing — these appear as filter pills on the public website'
             >
               <SubCategoryTagSelect
-                subCategories={subCategories}
+                subCategories={listingTypes}
                 values={form.category_tags}
                 onChange={(v) => set('category_tags', v)}
               />
             </FormField>
-            {hasFeature(isRealEstate ? 're_feature_tags' : 'services_amenities') && (
+            <LockedSection
+              hasAccess={hasFeature(isRealEstate ? 're_feature_tags' : 'services_amenities')}
+              requiredTier={getRequiredTier(categoryGroup, isRealEstate ? 're_feature_tags' : 'services_amenities') ?? 'standard'}
+              feature='Services & Amenities'
+              listingId={id}
+            >
               <>
                 {attributesByType.key_feature.length > 0 && (
                   <>
@@ -2819,7 +2622,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                   </>
                 )}
               </>
-            )}
+            </LockedSection>
 
             {/* Room Types — Hotels only */}
             {isHotel && (
@@ -2878,7 +2681,12 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
           </SectionCard>
 
           {/* S5 — Social Handles (Premium+) */}
-          {hasFeature('social_handles') && (
+          <LockedSection
+            hasAccess={hasFeature('social_handles')}
+            requiredTier='premium'
+            feature='Social Media Handles'
+            listingId={id}
+          >
           <SectionCard
             icon={<Share2 className='h-5 w-5' />}
             title='Social Media Handles'
@@ -2968,10 +2776,15 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
               </AddButton>
             </div>
           </SectionCard>
-          )}
+          </LockedSection>
 
           {/* S6 — Reservation Links (Standard+) */}
-          {hasFeature('third_party_links') && (
+          <LockedSection
+            hasAccess={hasFeature('third_party_links')}
+            requiredTier='standard'
+            feature='Reservation Links'
+            listingId={id}
+          >
             <SectionCard
               icon={<LinkIcon className='h-5 w-5' />}
               title='Third-Party Reservation Links'
@@ -2991,10 +2804,15 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 onChange={(v) => set('reservation_links', v)}
               />
             </SectionCard>
-          )}
+          </LockedSection>
 
           {/* S7 — Contact (Premium+) */}
-          {hasFeature('company_contact') && (
+          <LockedSection
+            hasAccess={hasFeature('company_contact')}
+            requiredTier='premium'
+            feature='Contact Information'
+            listingId={id}
+          >
           <SectionCard
             icon={<Phone className='h-5 w-5' />}
             title='Contact Information'
@@ -3040,10 +2858,15 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
               </FormField>
             </div>
           </SectionCard>
-          )}
+          </LockedSection>
 
-          {/* S8 — Location (Standard+) */}
-          {hasFeature('address_map') && (
+          {/* S8 — Location (Free) */}
+          <LockedSection
+            hasAccess={hasFeature('address_map')}
+            requiredTier='free'
+            feature='Location & Map'
+            listingId={id}
+          >
           <SectionCard
             icon={<MapPin className='h-5 w-5' />}
             title='Location Details'
@@ -3051,12 +2874,12 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
           >
             <div className='grid grid-cols-1 gap-6 sm:grid-cols-2'>
               <div className='space-y-4'>
-                <FormField label='Address'>
+                <FormField label='Address *' error={errors.address}>
                   <Input
                     placeholder='e.g. Calle del Cuartel #36-60, Getsemaní'
                     value={form.address}
                     onChange={(e) => set('address', e.target.value)}
-                    className='rounded-md'
+                    className={`rounded-md ${errors.address ? 'border-destructive' : ''}`}
                   />
                 </FormField>
                 <FormField label='Address URL' hint='Direct link to the address (e.g. Google Maps short link)'>
@@ -3123,7 +2946,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
               </div>
             </div>
           </SectionCard>
-          )}
+          </LockedSection>
 
           {/* S9 — Pricing & Availability */}
           {!isRealEstate && (
@@ -3279,7 +3102,12 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                   <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
                     Opening Hours
                   </p>
-                  {hasFeature('hours_status') && (
+                  <LockedSection
+                    hasAccess={hasFeature('hours_status')}
+                    requiredTier='standard'
+                    feature='Hours Status'
+                    listingId={id}
+                  >
                     <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
                       <FormField label='Hours Status' hint='Quick display text, e.g. "Opens Today at 11:30 am"'>
                         <Input
@@ -3298,7 +3126,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                         />
                       </FormField>
                     </div>
-                  )}
+                  </LockedSection>
                   <WeeklyHoursEditor
                     hours={form.weekly_hours}
                     onChange={(v) => set('weekly_hours', v)}
@@ -3306,8 +3134,14 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 </>
               )}
               {/* Boating Info — Boating subcategory + Standard+ */}
-              {isBoating && hasFeature('boating_info') && (
-                <>
+              {isBoating && (
+                <LockedSection
+                  hasAccess={hasFeature('boating_info')}
+                  requiredTier='standard'
+                  feature='Boating Info'
+                  listingId={id}
+                >
+                  <>
                   <Separator />
                   <p className='text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
                     Boating Info
@@ -3338,7 +3172,8 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                       />
                     </FormField>
                   </div>
-                </>
+                  </>
+                </LockedSection>
               )}
 
               {/* Boat Details — Boating subcategory */}
@@ -3419,7 +3254,13 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
           )}
 
           {/* S10 — Travel Tips (Standard+ for Activities/Beaches) */}
-          {hasFeature('travel_tips') && (isActivities || isBeach) && (
+          {(isActivities || isBeach) && (
+            <LockedSection
+              hasAccess={hasFeature('travel_tips')}
+              requiredTier='standard'
+              feature='Travel Tips & Booking Info'
+              listingId={id}
+            >
             <SectionCard
               icon={<Lightbulb className='h-5 w-5' />}
               title='Travel Tips & Booking Info'
@@ -3430,10 +3271,17 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 onChange={(v) => set('travel_tips', v)}
               />
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* Developer Info (Standard+ for Real Estate) */}
-          {isRealEstate && hasFeature('re_developer_info') && (
+          {isRealEstate && (
+            <LockedSection
+              hasAccess={hasFeature('re_developer_info')}
+              requiredTier='standard'
+              feature='Developer Information'
+              listingId={id}
+            >
             <SectionCard
               icon={<Globe className='h-5 w-5' />}
               title='Developer Information'
@@ -3505,10 +3353,17 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 </FormField>
               </div>
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* Appointments CTA (Standard+ for Real Estate) */}
-          {isRealEstate && hasFeature('re_appointment') && (
+          {isRealEstate && (
+            <LockedSection
+              hasAccess={hasFeature('re_appointment')}
+              requiredTier='standard'
+              feature='Appointments'
+              listingId={id}
+            >
             <SectionCard
               icon={<Clock className='h-5 w-5' />}
               title='Appointments'
@@ -3543,10 +3398,17 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 />
               </FormField>
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* Website CTA (Standard+ for Real Estate) */}
-          {isRealEstate && hasFeature('re_website_cta') && (
+          {isRealEstate && (
+            <LockedSection
+              hasAccess={hasFeature('re_website_cta')}
+              requiredTier='standard'
+              feature='Website / Portal'
+              listingId={id}
+            >
             <SectionCard
               icon={<Globe className='h-5 w-5' />}
               title='Website / Portal'
@@ -3581,10 +3443,17 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 />
               </FormField>
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* Blueprint + Video Uploads (Premium+ for Real Estate) */}
-          {isRealEstate && hasFeature('re_blueprint') && (
+          {isRealEstate && (
+            <LockedSection
+              hasAccess={hasFeature('re_blueprint')}
+              requiredTier='premium'
+              feature='Blueprint & Videos'
+              listingId={id}
+            >
             <SectionCard
               icon={<Upload className='h-5 w-5' />}
               title='Blueprint & Videos'
@@ -3640,10 +3509,16 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 </AddButton>
               </div>
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* S11 — FAQs (Premium+) */}
-          {hasFeature('faqs') && (
+          <LockedSection
+            hasAccess={hasFeature('faqs')}
+            requiredTier='premium'
+            feature='FAQs'
+            listingId={id}
+          >
             <SectionCard
               icon={<HelpCircle className='h-5 w-5' />}
               title='FAQs'
@@ -3651,10 +3526,15 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
             >
               <FAQsEditor faqs={form.faqs} onChange={(v) => set('faqs', v)} />
             </SectionCard>
-          )}
+          </LockedSection>
 
           {/* S12 — Deals (Premium+) */}
-          {hasFeature(isRealEstate ? 're_promotions' : 'deals_page') && (
+          <LockedSection
+            hasAccess={hasFeature(isRealEstate ? 're_promotions' : 'deals_page')}
+            requiredTier={getRequiredTier(categoryGroup, isRealEstate ? 're_promotions' : 'deals_page') ?? 'premium'}
+            feature='Deals & Promotions'
+            listingId={id}
+          >
             <SectionCard
               icon={<Percent className='h-5 w-5' />}
               title='Deals & Promotions'
@@ -3662,7 +3542,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
             >
               <DealsEditor deals={form.deals} onChange={(v) => set('deals', v)} />
             </SectionCard>
-          )}
+          </LockedSection>
 
           {/* Select Feature Post */}
           <SectionCard
@@ -3717,7 +3597,13 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
           </SectionCard>
 
           {/* S13 — Menu (Gastronomy, Standard+) */}
-          {isGastronomy && hasFeature('menu') && (
+          {isGastronomy && (
+            <LockedSection
+              hasAccess={hasFeature('menu')}
+              requiredTier='standard'
+              feature='Menu'
+              listingId={id}
+            >
             <SectionCard
               icon={<UtensilsCrossed className='h-5 w-5' />}
               title='Menu'
@@ -3742,7 +3628,12 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                   />
                 </FormField>
               </div>
-              {hasFeature('menu_file') && (
+              <LockedSection
+                hasAccess={hasFeature('menu_file')}
+                requiredTier='standard'
+                feature='Menu File'
+                listingId={id}
+              >
                 <FormField label='Menu File URL' hint='Direct link to PDF menu file'>
                   <Input
                     type='url'
@@ -3752,17 +3643,24 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                     className='rounded-md'
                   />
                 </FormField>
-              )}
+              </LockedSection>
               <Separator />
               <MenuEditor
                 items={form.menu_items}
                 onChange={(v) => set('menu_items', v)}
               />
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* Also Available On (Premium+ for Activities + Gastronomy) */}
-          {(isActivities || isGastronomy) && hasFeature('also_available_on') && (
+          {(isActivities || isGastronomy) && (
+            <LockedSection
+              hasAccess={hasFeature('also_available_on')}
+              requiredTier='premium'
+              feature='Also Available On'
+              listingId={id}
+            >
             <SectionCard
               icon={<ExternalLink className='h-5 w-5' />}
               title='Also Available On'
@@ -3807,10 +3705,17 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 </AddButton>
               </div>
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* Featured In — press & media (Premium+ for Gastronomy) */}
-          {isGastronomy && hasFeature('featured_in') && (
+          {isGastronomy && (
+            <LockedSection
+              hasAccess={hasFeature('featured_in')}
+              requiredTier='premium'
+              feature='Featured In'
+              listingId={id}
+            >
             <SectionCard
               icon={<Globe className='h-5 w-5' />}
               title='Featured In'
@@ -3855,10 +3760,17 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 </AddButton>
               </div>
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* Book With Us (Premium+ for Gastronomy + Hotels + Beaches + Boating) */}
-          {(isGastronomy || isHotel || isBeach || isBoating) && hasFeature('book_with_us') && (
+          {(isGastronomy || isHotel || isBeach || isBoating) && (
+            <LockedSection
+              hasAccess={hasFeature('book_with_us')}
+              requiredTier='premium'
+              feature='Book With Us'
+              listingId={id}
+            >
             <SectionCard
               icon={<CheckSquare className='h-5 w-5' />}
               title='Book With Us'
@@ -3901,6 +3813,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 </FormField>
               </div>
             </SectionCard>
+            </LockedSection>
           )}
 
           {/* RNT & Inventory — shared optional fields */}
@@ -3932,7 +3845,13 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
           )}
 
           {/* Direct Reservation Links (Premium+ for Hotels/Beaches/Boating) */}
-          {(isHotel || isBeach || isBoating) && hasFeature('direct_links') && (
+          {(isHotel || isBeach || isBoating) && (
+            <LockedSection
+              hasAccess={hasFeature('direct_links')}
+              requiredTier='premium'
+              feature='Direct Reservation Links'
+              listingId={id}
+            >
             <SectionCard
               icon={<LinkIcon className='h-5 w-5' />}
               title='Direct Reservation Links'
@@ -3943,6 +3862,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
                 onChange={(v) => set('direct_links', v)}
               />
             </SectionCard>
+            </LockedSection>
           )}
         </div>
       </Main>

@@ -1,205 +1,146 @@
-import { Clock, MapPin, MoreVertical } from 'lucide-react'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Clock, MapPin, MoreVertical, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { fetchUpcomingEvents, type Event } from '@/lib/services/events.service'
 
-const events = [
-  {
-    id: 1,
-    title: 'Jazz Night at Plaza de la Aduana',
-    category: 'music',
-    featured: true,
-    date: 'Jan 8, 2026',
-    time: '8:00 PM',
-    location: 'Plaza de la Aduana',
-    status: 'Published',
-    statusColor: 'text-green-600',
-    img: 'https://picsum.photos/80?random=1',
-  },
-  {
-    id: 2,
-    title: 'Contemporary Art Exhibition Opening',
-    category: 'art',
-    featured: false,
-    date: 'Jan 10, 2026',
-    time: '10:00 AM',
-    location: 'Museo de Arte Moderno',
-    status: 'Published',
-    statusColor: 'text-green-600',
-    img: 'https://picsum.photos/80?random=2',
-  },
-  {
-    id: 3,
-    title: 'Cartagena Street Food Festival',
-    category: 'food',
-    featured: true,
-    date: 'Jan 12, 2026',
-    time: '12:00 PM',
-    location: 'Centro Histórico',
-    status: 'Scheduled',
-    statusColor: 'text-red-500',
-    img: 'https://picsum.photos/80?random=3',
-  },
-  {
-    id: 4,
-    title: 'Traditional Colombian Dance Workshop',
-    category: 'culture',
-    featured: false,
-    date: 'Jan 15, 2026',
-    time: '4:00 PM',
-    location: 'Teatro Heredia',
-    status: 'Draft',
-    statusColor: 'text-yellow-500',
-    img: 'https://picsum.photos/80?random=4',
-  },
-]
+const CATEGORY_COLORS: Record<string, string> = {
+  Music: 'bg-purple-100 text-purple-700',
+  Art: 'bg-blue-100 text-blue-700',
+  Food: 'bg-green-100 text-green-700',
+  Culture: 'bg-gold/10 text-gold',
+  Festivals: 'bg-red/10 text-red',
+  Sports: 'bg-teal-100 text-teal-700',
+}
 
-const categoryColors = {
-  music: 'bg-purple-100 text-purple-700',
-  art: 'bg-blue-100 text-blue-700',
-  food: 'bg-green-100 text-green-700',
-  culture: 'bg-gold/10 text-gold/70',
-  festivals: 'bg-red/10 text-red/70',
+function formatEventDate(dateStr: string): string {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function statusStyle(status: Event['status']): string {
+  switch (status) {
+    case 'published': return 'text-green-600'
+    case 'cancelled': return 'text-red-500'
+    default: return 'text-yellow-500'
+  }
+}
+
+function statusLabel(status: Event['status']): string {
+  switch (status) {
+    case 'published': return 'Published'
+    case 'cancelled': return 'Cancelled'
+    case 'pending': return 'Pending'
+    default: return 'Draft'
+  }
 }
 
 export default function UpcomingEvents() {
+  const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchUpcomingEvents(6).then((data) => {
+      setEvents(data)
+      setLoading(false)
+    })
+  }, [])
+
   return (
     <div>
-      {/* Header */}
       <div className='mb-4 flex items-center justify-between'>
         <h2 className='font-antigua text-xl font-semibold'>Upcoming Events</h2>
-
-        <Button
-          variant='ghost'
-          size={'sm'}
-          className='text-red-500 hover:bg-background hover:text-red-600'
-        >
+        <Button variant='ghost' size='sm' className='text-red-500 hover:bg-background hover:text-red-600'>
           View all →
         </Button>
       </div>
 
-      {/* Card */}
-      <div className='space-y-3'>
-        {events.map((event) => (
-          <Card key={event.id} className='hover:bg-muted/30'>
-            <CardContent className='p-0'>
-              <div className='flex flex-col gap-3 px-4 transition sm:flex-row sm:items-center sm:justify-between'>
-                {/* LEFT SIDE */}
-                <div className='flex items-start gap-3 sm:items-center sm:gap-4'>
-                  <img
-                    src={event.img}
-                    className='h-12 w-16 flex-shrink-0 rounded-lg object-cover sm:h-13 sm:w-18'
-                  />
+      {loading ? (
+        <div className='flex justify-center py-10'>
+          <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+        </div>
+      ) : events.length === 0 ? (
+        <div className='py-10 text-center text-sm text-muted-foreground'>
+          No upcoming events. Create one to get started.
+        </div>
+      ) : (
+        <div className='space-y-3'>
+          {events.map((event) => {
+            const catName = event.category?.name ?? ''
+            const catClass = CATEGORY_COLORS[catName] ?? 'bg-gray-100 text-gray-600'
 
-                  <div className='min-w-0'>
-                    {/* TITLE */}
-                    <div className='flex flex-wrap items-center gap-2'>
-                      <p className='truncate text-sm font-semibold sm:text-base'>
-                        {event.title}
-                      </p>
+            return (
+              <Card key={event.id} className='hover:bg-muted/30'>
+                <CardContent className='p-0'>
+                  <div className='flex flex-col gap-3 px-4 transition sm:flex-row sm:items-center sm:justify-between'>
 
-                      {event.featured && (
-                        <Badge className='rounded-full bg-gradient-to-b from-gold to-gold-light text-xs text-white'>
-                          ★ Featured
-                        </Badge>
+                    {/* LEFT */}
+                    <div className='flex items-start gap-3 sm:items-center sm:gap-4'>
+                      {event.cover_image ? (
+                        <img
+                          src={event.cover_image}
+                          alt={event.title}
+                          className='h-12 w-16 flex-shrink-0 rounded-lg object-cover'
+                        />
+                      ) : (
+                        <div className='h-12 w-16 flex-shrink-0 rounded-lg bg-muted' />
                       )}
+
+                      <div className='min-w-0'>
+                        <div className='flex flex-wrap items-center gap-2'>
+                          <p className='truncate text-sm font-semibold sm:text-base'>
+                            {event.title}
+                          </p>
+                          {event.is_featured && (
+                            <Badge className='rounded-full bg-gradient-to-b from-gold to-gold-light text-xs text-white'>
+                              ★ Featured
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground'>
+                          {catName && (
+                            <Badge variant='secondary' className={`${catClass} rounded-full font-normal`}>
+                              {catName}
+                            </Badge>
+                          )}
+                          <div className='flex items-center gap-1'>
+                            <Clock className='h-3 w-3' />
+                            {formatEventDate(event.event_date)}
+                            {event.start_time && ` • ${event.start_time}`}
+                          </div>
+                          {event.location && (
+                            <div className='flex items-center gap-1'>
+                              <MapPin className='h-3 w-3' />
+                              {event.location}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* CATEGORY + META */}
-                    <div className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground'>
-                      <Badge
-                        variant='secondary'
-                        className={`${categoryColors[event.category]} rounded-full font-normal`}
-                      >
-                        {event.category}
-                      </Badge>
-
-                      <div className='flex items-center gap-1'>
-                        <Clock className='h-3 w-3' />
-                        {event.date} • {event.time}
+                    {/* RIGHT */}
+                    <div className='flex items-center justify-between gap-4 sm:justify-end'>
+                      <div className={`flex items-center gap-2 text-xs sm:text-sm ${statusStyle(event.status)}`}>
+                        <span className='h-2 w-2 rounded-full bg-current' />
+                        {statusLabel(event.status)}
                       </div>
-
-                      <div className='flex items-center gap-1'>
-                        <MapPin className='h-3 w-3' />
-                        {event.location}
-                      </div>
+                      <MoreVertical className='h-4 w-4 flex-shrink-0 cursor-pointer text-muted-foreground' />
                     </div>
+
                   </div>
-                </div>
-
-                {/* RIGHT SIDE */}
-                <div className='flex items-center justify-between gap-4 sm:justify-end'>
-                  <div
-                    className={`flex items-center gap-2 text-xs sm:text-sm ${event.statusColor}`}
-                  >
-                    <span className='h-2 w-2 rounded-full bg-current'></span>
-                    {event.status}
-                  </div>
-
-                  <MoreVertical className='h-4 w-4 flex-shrink-0 cursor-pointer text-muted-foreground' />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          // <Card key={event.id} className='hover:bg-muted/30'>
-          //   <CardContent className='p-0'>
-          //     <div className='flex items-center justify-between px-4 transition '>
-          //       {/* LEFT SIDE */}
-          //       <div className='flex items-center gap-4'>
-          //         <img
-          //           src={event.img}
-          //           className='h-13 w-18 rounded-lg object-cover'
-          //         />
-
-          //         <div>
-          //           <div className='flex items-center gap-2'>
-          //             <p className='font-semibold'>{event.title}</p>
-
-          //             {event.featured && (
-          //               <Badge className='rounded-full bg-gradient-to-b from-gold to-gold-light text-white'>
-          //                 ★ Featured
-          //               </Badge>
-          //             )}
-          //           </div>
-
-          //           {/* Category */}
-          //           <div className='mt-1 flex items-center gap-2'>
-          //             <Badge
-          //               variant='secondary'
-          //               className={`${categoryColors[event.category]} rounded-full font-normal`}
-          //             >
-          //               {event.category}
-          //             </Badge>
-
-          //             <div className='flex items-center gap-1 text-xs text-muted-foreground'>
-          //               <Clock className='h-3 w-3' />
-          //               {event.date} • {event.time}
-          //             </div>
-
-          //             <div className='flex items-center gap-1 text-xs text-muted-foreground'>
-          //               <MapPin className='h-3 w-3' />
-          //               {event.location}
-          //             </div>
-          //           </div>
-          //         </div>
-          //       </div>
-
-          //       {/* RIGHT SIDE */}
-          //       <div className='flex items-center gap-4'>
-          //         <div
-          //           className={`flex items-center gap-2 text-sm ${event.statusColor}`}
-          //         >
-          //           <span className='h-2 w-2 rounded-full bg-current'></span>
-          //           {event.status}
-          //         </div>
-
-          //         <MoreVertical className='h-4 w-4 cursor-pointer text-muted-foreground' />
-          //       </div>
-          //     </div>
-          //   </CardContent>
-          // </Card>
-        ))}
-      </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

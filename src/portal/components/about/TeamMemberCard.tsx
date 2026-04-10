@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { Mail, Twitter, Instagram, Linkedin } from "lucide-react";
 
 export interface TeamMember {
   name: string;
   role: string;
   image: string;
+  slug?: string;
   socials?: {
     email?: string;
     twitter?: string;
@@ -17,19 +19,38 @@ interface TeamMemberCardProps {
 }
 
 export default function TeamMemberCard({ member }: TeamMemberCardProps) {
+  const profileHref = member.slug ? `/about-us/team/${member.slug}` : undefined;
+
+  const ImageWrapper = ({ children }: { children: React.ReactNode }) =>
+    profileHref ? (
+      <Link href={profileHref} className="block">
+        {children}
+      </Link>
+    ) : (
+      <>{children}</>
+    );
+
   return (
     <div className="flex flex-col w-full">
       {/* Square image — fills full card width */}
       <div className="w-full aspect-square overflow-hidden rounded-xl mb-4">
-        <img
-          src={member.image}
-          alt={member.name}
-          className="w-full h-full object-cover object-top"
-          loading="lazy"
-        />
+        <ImageWrapper>
+          <img
+            src={member.image}
+            alt={member.name}
+            className="w-full h-full object-cover object-top transition-transform duration-300 hover:scale-105"
+            loading="lazy"
+          />
+        </ImageWrapper>
       </div>
       <h3 className="font-antigua text-xl sm:text-2xl font-black" style={{ color: "#000" }}>
-        {member.name}
+        {profileHref ? (
+          <Link href={profileHref} className="hover:text-gold transition-colors">
+            {member.name}
+          </Link>
+        ) : (
+          member.name
+        )}
       </h3>
       <p className="text-sm mt-0.5 mb-3" style={{ color: "#555" }}>
         {member.role}

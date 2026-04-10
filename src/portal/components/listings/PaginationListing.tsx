@@ -1,8 +1,11 @@
+'use client'
+
 import React, { useRef } from "react";
 import { Card, CardContent } from "@public/components/ui/card";
-import { Star, Heart, ChevronRight, ChevronLeft } from "lucide-react";
+import { Star, ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@public/components/ui/button";
 import Link from "next/link";
+import FavoriteButton from "@public/components/listings/FavoriteButton";
 
 export default function PaginationListing({
   premiumListings = [],
@@ -118,9 +121,10 @@ export default function PaginationListing({
                 >
                   <Link href={item.href} className="block h-full">
                     <Card className="h-full relative rounded-2xl shadow-md overflow-hidden bg-white">
-                      <span className="absolute rounded-full shadow-lg p-2 top-3 right-3 bg-white/30 backdrop-md">
-                        <Heart className="fill-white" />
-                      </span>
+                      <FavoriteButton
+                        listingId={item.id}
+                        className="absolute top-3 right-3"
+                      />
                       <div className="absolute top-4 left-4 border-white border-4  bg-white/30 backdrop-md">
                         <img
                           src={item.image}
@@ -162,7 +166,7 @@ export default function PaginationListing({
                         </div>
 
                         <button className="mt-3 text-[#22c35d] font-extrabold underline underline-offset-4">
-                          MENU
+                          {item.feature_post_type === 'menu' ? 'MENU' : 'RESERVE'}
                         </button>
                       </CardContent>
                     </Card>

@@ -265,7 +265,7 @@ export async function getTopArticles(limit = 5) {
     .limit(limit)
 
   if (error) { console.error('[analytics.service] getTopArticles:', error.message); return [] }
-  return (data ?? []) as { id: string; title: string; views: number; category: { name: string } | null }[]
+  return (data ?? []) as unknown as { id: string; title: string; views: number; category: { name: string } | null }[]
 }
 
 export async function getTopHeartSaves(limit = 5) {
@@ -349,6 +349,208 @@ export async function getDailyEngagementByCategory(days = 7) {
   }
 
   return Object.entries(byDay).map(([day, cats]) => ({ day, ...cats }))
+}
+
+// ─── Dashboard Panel Stats (Inquiries / Engagement) ──────────────────────────
+
+export interface PanelStatItem {
+  label: string
+  value: number
+  percent: number
+}
+
+export interface DashboardPanelStats {
+  inquiries: PanelStatItem[]
+  engagement: PanelStatItem[]
+}
+
+export async function getDashboardPanelStats(): Promise<DashboardPanelStats> {
+  const [
+    phoneCalls, webClicks, thirdParty, directions,
+    visitors, clicks, heartSaves, emailClicks, waClicks,
+    comments,
+  ] = await Promise.all([
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'phone_click'),
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'website_click'),
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'third_party_click'),
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'directions_click'),
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'impression'),
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'click'),
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'heart_save'),
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'email_click'),
+    supabase.from('listing_analytics').select('*', { count: 'exact', head: true }).eq('event_type', 'whatsapp_click'),
+    supabase.from('comments').select('*', { count: 'exact', head: true }),
+  ])
+
+  const n = {
+    phone: phoneCalls.count ?? 0,
+    web: webClicks.count ?? 0,
+    thirdParty: thirdParty.count ?? 0,
+    directions: directions.count ?? 0,
+    visitors: visitors.count ?? 0,
+    clicks: clicks.count ?? 0,
+    heartSaves: heartSaves.count ?? 0,
+    email: emailClicks.count ?? 0,
+    wa: waClicks.count ?? 0,
+    comments: comments.count ?? 0,
+  }
+
+  const inqTotal = n.phone + n.web + n.thirdParty + n.directions
+  const inqPct = (v: number) => inqTotal > 0 ? Math.round((v / inqTotal) * 100) : 0
+
+  const totalInquiries = n.phone + n.email + n.wa
+  const engMax = Math.max(n.visitors, n.clicks, n.heartSaves, n.comments, totalInquiries, 1)
+  const engPct = (v: number) => Math.round((v / engMax) * 100)
+
+  return {
+    inquiries: [
+      { label: 'Phone Calls', value: n.phone, percent: inqPct(n.phone) },
+      { label: 'Web Link Clicks', value: n.web, percent: inqPct(n.web) },
+      { label: 'Third Party Platform Clicks', value: n.thirdParty, percent: inqPct(n.thirdParty) },
+      { label: 'Directions', value: n.directions, percent: inqPct(n.directions) },
+    ],
+    engagement: [
+      { label: 'Visitors', value: n.visitors, percent: engPct(n.visitors) },
+      { label: 'Clicks', value: n.clicks, percent: engPct(n.clicks) },
+      { label: 'Heart Saved', value: n.heartSaves, percent: engPct(n.heartSaves) },
+      { label: 'Reviews', value: n.comments, percent: engPct(n.comments) },
+      { label: 'Inquiries', value: totalInquiries, percent: engPct(totalInquiries) },
+    ],
+  }
+}
+
+// ─── Pending Review Items ─────────────────────────────────────────────────────
+
+export interface PendingReviewItem {
+  id: string
+  type: 'deal' | 'article'
+  title: string
+  authorLabel: string
+  status: string
+  statusClass: string
+  createdAt: string
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} hour${hrs !== 1 ? 's' : ''} ago`
+  const days = Math.floor(hrs / 24)
+  return `${days} day${days !== 1 ? 's' : ''} ago`
+}
+
+export async function getPendingReviewItems(limit = 5): Promise<PendingReviewItem[]> {
+  const [dealsRes, articlesRes] = await Promise.all([
+    supabase
+      .from('deals')
+      .select('id, title, created_at, created_by:users!created_by(full_name)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('articles')
+      .select('id, title, created_at, author:users!author_id(full_name)')
+      .eq('status', 'draft')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+  ])
+
+  const items: PendingReviewItem[] = []
+
+  for (const d of (dealsRes.data ?? []) as any[]) {
+    items.push({
+      id: d.id,
+      type: 'deal',
+      title: d.title,
+      authorLabel: `${d.created_by?.full_name ?? 'Unknown'} • Deal • ${timeAgo(d.created_at)}`,
+      status: 'Needs Review',
+      statusClass: 'bg-[#22C55E]/5 text-[#22C55E]',
+      createdAt: d.created_at,
+    })
+  }
+
+  for (const a of (articlesRes.data ?? []) as any[]) {
+    items.push({
+      id: a.id,
+      type: 'article',
+      title: a.title,
+      authorLabel: `${a.author?.full_name ?? 'Unknown'} • Article • ${timeAgo(a.created_at)}`,
+      status: 'Needs Review',
+      statusClass: 'bg-[#22C55E]/5 text-[#22C55E]',
+      createdAt: a.created_at,
+    })
+  }
+
+  return items
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit)
+}
+
+export async function approvePendingItem(type: 'deal' | 'article', id: string) {
+  if (type === 'deal') {
+    const { error } = await supabase.from('deals').update({ status: 'active' }).eq('id', id)
+    if (error) console.error('[analytics.service] approvePendingItem deal:', error.message)
+  } else {
+    const { error } = await supabase
+      .from('articles')
+      .update({ status: 'published', published_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) console.error('[analytics.service] approvePendingItem article:', error.message)
+  }
+}
+
+export async function rejectPendingItem(type: 'deal' | 'article', id: string) {
+  if (type === 'deal') {
+    const { error } = await supabase.from('deals').update({ status: 'draft' }).eq('id', id)
+    if (error) console.error('[analytics.service] rejectPendingItem deal:', error.message)
+  } else {
+    const { error } = await supabase.from('articles').update({ status: 'archived' }).eq('id', id)
+    if (error) console.error('[analytics.service] rejectPendingItem article:', error.message)
+  }
+}
+
+// ─── Calendar Events ──────────────────────────────────────────────────────────
+
+export interface CalendarEvent {
+  id: string
+  title: string
+  eventDate: string
+  categoryName: string
+  categoryColor: string
+}
+
+const CATEGORY_BADGE_COLORS: Record<string, string> = {
+  beaches: 'bg-gradient-to-r from-[#CF9921] to-[#D2BB6B]',
+  gastronomy: 'bg-gradient-to-r from-[#980001] to-[#D40D00]',
+  hotels: 'bg-gradient-to-r from-[#22C55E] to-[#105F2D]',
+  activities: 'bg-gradient-to-r from-[#6FC6E2] to-[#1B81B2]',
+  boating: 'bg-gradient-to-r from-[#6FC6E2] to-[#1B81B2]',
+  'real estate': 'bg-gradient-to-r from-[#CF9921] to-[#D2BB6B]',
+}
+
+export async function getEventsForMonth(year: number, month: number): Promise<CalendarEvent[]> {
+  const start = new Date(year, month, 1).toISOString().slice(0, 10)
+  const end = new Date(year, month + 1, 0).toISOString().slice(0, 10)
+
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, title, event_date, category:categories!category_id(name)')
+    .gte('event_date', start)
+    .lte('event_date', end)
+    .eq('status', 'published')
+    .order('event_date', { ascending: true })
+
+  if (error) { console.error('[analytics.service] getEventsForMonth:', error.message); return [] }
+
+  return (data ?? []).map((e: any) => ({
+    id: e.id,
+    title: e.title,
+    eventDate: e.event_date,
+    categoryName: e.category?.name ?? 'Event',
+    categoryColor: CATEGORY_BADGE_COLORS[(e.category?.name ?? '').toLowerCase()] ?? 'bg-gradient-to-r from-gray-400 to-gray-600',
+  }))
 }
 
 // ─── Dashboard Overview Stats ─────────────────────────────────────────────────

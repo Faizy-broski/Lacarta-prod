@@ -1,75 +1,64 @@
 // src/components/dashboard/AnalyticsPanels.tsx
+'use client'
+import { useEffect, useState } from 'react'
 import { Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import {
+  getDashboardPanelStats,
+  type DashboardPanelStats,
+  type PanelStatItem,
+} from '@/lib/services/analytics.service'
 
-type StatItem = {
-  label: string
-  value: string
-  percent: number
-  color: string
+function formatStat(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+  return n.toLocaleString()
 }
 
-const inquiries: StatItem[] = [
-  { label: 'Phone Calls', value: '45.0K', percent: 42, color: 'bg-[#d1aa46]' },
-  {
-    label: 'Web Link Clicks',
-    value: '28.0K',
-    percent: 26,
-    color: 'bg-[#d1aa46]',
-  },
-  {
-    label: 'Third Party Platform clicks',
-    value: '12.0K',
-    percent: 11,
-    color: 'bg-[#d1aa46]',
-  },
-  { label: 'Directions', value: '8.5K', percent: 8, color: 'bg-[#d1aa46]' },
-]
-
-const engagement: StatItem[] = [
-  { label: 'Visitors', value: '45.0K', percent: 42, color: 'bg-[#1daa51]' },
-  { label: 'Clicks', value: '28.0K', percent: 26, color: 'bg-[#1daa51]' },
-  { label: 'Scrolled', value: '52.0K', percent: 50, color: 'bg-[#1daa51]' },
-  { label: 'Deals Clicked', value: '8.5K', percent: 8, color: 'bg-[#1daa51]' },
-  { label: 'Reviews', value: '6.2K', percent: 86, color: 'bg-[#1daa51]' },
-  { label: 'Heart Saved', value: '7.8K', percent: 7, color: 'bg-[#1daa51]' },
-  { label: 'Inquiries', value: '7.8K', percent: 7, color: 'bg-[#1daa51]' },
-]
-
-const geography: StatItem[] = [
-  { label: 'Colombia', value: '45.0K', percent: 42, color: ' bg-[#b50700]' },
-  {
-    label: 'United States',
-    value: '28.0K',
-    percent: 26,
-    color: 'bg-[#b50700]',
-  },
-  { label: 'Spain', value: '12.0K', percent: 11, color: 'bg-[#b50700]' },
-  { label: 'Mexico', value: '8.5K', percent: 8, color: 'bg-[#b50700]' },
-  { label: 'Argentina', value: '6.2K', percent: 6, color: 'bg-[#b50700]' },
-  { label: 'Other', value: '7.8K', percent: 7, color: 'bg-[#b50700]' },
-]
-
-function StatBar({ item }: { item: StatItem }) {
+function StatBar({
+  item,
+  color,
+}: {
+  item: PanelStatItem
+  color: string
+}) {
   return (
     <div className='space-y-1.5'>
       <div className='flex items-center justify-between text-sm'>
         <span className='font-bold'>{item.label}</span>
         <span className='font-medium'>
-          {item.value} ({item.percent}%)
+          {formatStat(item.value)} ({item.percent}%)
         </span>
       </div>
       <Progress
         value={item.percent}
-        className={`h-2`}
-        indicatorClassName={item.color}
+        className='h-2'
+        indicatorClassName={color}
       />
     </div>
   )
 }
 
+function SkeletonBar() {
+  return (
+    <div className='space-y-1.5 animate-pulse'>
+      <div className='flex justify-between'>
+        <div className='h-4 w-32 rounded bg-gray-200' />
+        <div className='h-4 w-20 rounded bg-gray-200' />
+      </div>
+      <div className='h-2 w-full rounded bg-gray-200' />
+    </div>
+  )
+}
+
 export function AnalyticsPanels() {
+  const [data, setData] = useState<DashboardPanelStats | null>(null)
+
+  useEffect(() => {
+    getDashboardPanelStats().then(setData)
+  }, [])
+
   return (
     <div className='grid gap-6 md:grid-cols-3'>
       {/* Inquiries Analytics */}
@@ -83,14 +72,16 @@ export function AnalyticsPanels() {
               View All
             </span>
           </div>
-          <p className='text-xs text-muted-foreground'>
-            All time vs last 30 days
-          </p>
+          <p className='text-xs text-muted-foreground'>All time</p>
         </CardHeader>
         <CardContent className='space-y-4'>
-          {inquiries.map((item, i) => (
-            <StatBar key={i} item={item} />
-          ))}
+          {data
+            ? data.inquiries.map((item, i) => (
+                <StatBar key={i} item={item} color='bg-[#d1aa46]' />
+              ))
+            : Array(4)
+                .fill(0)
+                .map((_, i) => <SkeletonBar key={i} />)}
         </CardContent>
       </Card>
 
@@ -105,14 +96,16 @@ export function AnalyticsPanels() {
               View All
             </span>
           </div>
-          <p className='text-xs text-muted-foreground'>
-            Latest updates & actions
-          </p>
+          <p className='text-xs text-muted-foreground'>All time</p>
         </CardHeader>
         <CardContent className='space-y-4'>
-          {engagement.map((item, i) => (
-            <StatBar key={i} item={item} />
-          ))}
+          {data
+            ? data.engagement.map((item, i) => (
+                <StatBar key={i} item={item} color='bg-[#1daa51]' />
+              ))
+            : Array(5)
+                .fill(0)
+                .map((_, i) => <SkeletonBar key={i} />)}
         </CardContent>
       </Card>
 
@@ -129,12 +122,15 @@ export function AnalyticsPanels() {
             Where your readers come from
           </p>
         </CardHeader>
-        <CardContent className='space-y-4'>
-          {geography.map((item, i) => (
-            <StatBar key={i} item={item} />
-          ))}
+        <CardContent className='flex flex-col items-center justify-center gap-2 py-8 text-center text-sm text-muted-foreground'>
+          <Globe className='h-8 w-8 opacity-30' />
+          <p className='font-medium'>Geographic tracking coming soon</p>
+          <p className='text-xs'>
+            Country-level data will appear here once geo tracking is enabled.
+          </p>
         </CardContent>
       </Card>
     </div>
   )
 }
+

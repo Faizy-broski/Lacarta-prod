@@ -1,19 +1,5 @@
-import { Compass, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent } from '@/components/ui/tabs'
-import { Main } from '@/components/layout/main'
-import ArticleTable from '../article/ArticleTable'
-import CategoryCard from '../category/CategoryCard'
-import TabsPage from '../components/tabs'
-import DraftCard from '../draft/DraftCard'
-import FeaturedStoryCard from '../featured/FeaturedStoryCard'
-import TravelToolCard from '../travelTool/TravelToolCard'
-import QuickActionCard from './QuickActionCard'
+export { ContentLayout as ArticleContent } from '../components/ContentLayout'
 
-export function ArticleContent() {
-  return (
-    <>
-      <Main>
         <Tabs
           orientation='vertical'
           defaultValue='overview'
@@ -41,8 +27,6 @@ export function ArticleContent() {
 
         <TravelToolCard />
 
-        {/* QUICKACTIONS */}
-        <QuickActionCard />
       </Main>
     </>
   )
