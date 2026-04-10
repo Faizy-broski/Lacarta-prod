@@ -1,4 +1,7 @@
-'use client'
-export const dynamic = 'force-dynamic'
 import { ListingDetailPage } from '@/features/listings/ListingDetailPage'
-export default ListingDetailPage
+
+export const dynamic = 'force-dynamic'
+
+export default function Page() {
+  return <ListingDetailPage />
+}
