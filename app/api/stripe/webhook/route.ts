@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+
 // ─── Clients ────────────────────────────────────────────────────────────────────
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-05-28.basil',
-})
+let _stripe: Stripe | null = null
+function getStripe(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-05-28.basil',
+    })
+  }
+  return _stripe
+}
 
 // Service-role client — bypasses RLS for server-side writes
 function getServiceClient() {
@@ -69,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
+    event = getStripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Webhook verification failed'
     console.error('[stripe/webhook] verification failed:', message)
@@ -103,7 +111,7 @@ export async function POST(req: NextRequest) {
 
         // Retrieve the subscription to get period dates
         const subId = session.subscription as string
-        const sub = await stripe.subscriptions.retrieve(subId)
+        const sub = await getStripe().subscriptions.retrieve(subId)
 
         await upsertSubscription(supabase, {
           listingId,

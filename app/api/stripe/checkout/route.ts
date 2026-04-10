@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
-// ─── Stripe client ─────────────────────────────────────────────────────────────
+export const dynamic = 'force-dynamic'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-05-28.basil',
-})
+// ─── Stripe client (lazy) ──────────────────────────────────────────────────────
+
+let _stripe: Stripe | null = null
+function getStripe(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-05-28.basil',
+    })
+  }
+  return _stripe
+}
 
 // ─── Price ID lookup ───────────────────────────────────────────────────────────
 
@@ -68,7 +76,7 @@ export async function POST(req: NextRequest) {
     const priceId = getPriceId(tier, billingPeriod, group)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       customer_email: clientEmail,
