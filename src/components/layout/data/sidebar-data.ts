@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   NotebookPen,
   Inbox,
+  Star,
 } from 'lucide-react'
 
 export type UserRole =
@@ -56,6 +57,7 @@ export function getSidebarNavForRole(role: UserRole | string | undefined) {
                 { title: 'Articles', url: '/dashboard/content' },
                 { title: 'Drafts', url: '/dashboard/content/drafts' },
                 { title: 'Categories', url: '/dashboard/content/categories' },
+                { title: 'Featured Stories', url: '/dashboard/content/featured-stories', icon: Star },
                 { title: 'Story Submissions', url: '/dashboard/story-submissions', icon: Inbox },
               ],
             },
@@ -68,6 +70,16 @@ export function getSidebarNavForRole(role: UserRole | string | undefined) {
               title: 'Deals',
               url: '/dashboard/deals',
               icon: Tag,
+            },
+            {
+              title: 'Listing Submissions',
+              url: '/dashboard/listing-submissions',
+              icon: Inbox,
+            },
+            {
+              title: 'Featured Listings',
+              url: '/dashboard/listings/featured',
+              icon: Star,
             },
             {
               title: 'Hotels',
@@ -156,6 +168,7 @@ export function getSidebarNavForRole(role: UserRole | string | undefined) {
                 { title: 'Articles', url: '/dashboard/content' },
                 { title: 'Drafts', url: '/dashboard/content/drafts' },
                 { title: 'Categories', url: '/dashboard/content/categories' },
+                { title: 'Featured Stories', url: '/dashboard/content/featured-stories', icon: Star },
                 { title: 'Story Submissions', url: '/dashboard/story-submissions', icon: Inbox },
               ],
             },
@@ -168,6 +181,16 @@ export function getSidebarNavForRole(role: UserRole | string | undefined) {
               title: 'Deals',
               url: '/dashboard/deals',
               icon: Tag,
+            },
+            {
+              title: 'Listing Submissions',
+              url: '/dashboard/listing-submissions',
+              icon: Inbox,
+            },
+            {
+              title: 'Featured Listings',
+              url: '/dashboard/listings/featured',
+              icon: Star,
             },
             {
               title: 'Hotels',
@@ -255,6 +278,7 @@ export function getSidebarNavForRole(role: UserRole | string | undefined) {
                 { title: 'Articles', url: '/dashboard/content' },
                 { title: 'Drafts', url: '/dashboard/content/drafts' },
                 { title: 'Categories', url: '/dashboard/content/categories' },
+                { title: 'Featured Stories', url: '/dashboard/content/featured-stories', icon: Star },
                 { title: 'Story Submissions', url: '/dashboard/story-submissions', icon: Inbox },
               ],
             },
@@ -267,6 +291,16 @@ export function getSidebarNavForRole(role: UserRole | string | undefined) {
               title: 'Deals',
               url: '/dashboard/deals',
               icon: Tag,
+            },
+            {
+              title: 'Listing Submissions',
+              url: '/dashboard/listing-submissions',
+              icon: Inbox,
+            },
+            {
+              title: 'Featured Listings',
+              url: '/dashboard/listings/featured',
+              icon: Star,
             },
             { title: 'Users', url: '/dashboard/users', icon: Users },
             { title: 'Applications', url: '/dashboard/applications', icon: ClipboardCheck },
@@ -290,7 +324,19 @@ export function getSidebarNavForRole(role: UserRole | string | undefined) {
                 { title: 'Articles', url: '/dashboard/content' },
                 { title: 'Drafts', url: '/dashboard/content/drafts' },
                 { title: 'Categories', url: '/dashboard/content/categories' },
+                { title: 'Featured Stories', url: '/dashboard/content/featured-stories', icon: Star },
+                { title: 'Story Submissions', url: '/dashboard/story-submissions', icon: Inbox },
               ],
+            },
+            {
+              title: 'Listing Submissions',
+              url: '/dashboard/listing-submissions',
+              icon: Inbox,
+            },
+            {
+              title: 'Featured Listings',
+              url: '/dashboard/listings/featured',
+              icon: Star,
             },
             {
               title: 'Settings',

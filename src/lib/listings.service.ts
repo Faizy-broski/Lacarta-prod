@@ -102,12 +102,15 @@ export async function fetchListingBySlug(slug: string): Promise<PublicListing | 
 
 /**
  * Fetch featured listings across ALL categories (used on the homepage).
+ * Supports both the legacy status='featured' approach and the new is_featured boolean.
  */
 export async function fetchFeaturedListings(limit = 12): Promise<PublicListing[]> {
   const { data, error } = await supabase
     .from('listings')
-    .select('id, title, subtitle, cover_image, category_id, categories(name), seo_slug, status, created_at')
-    .eq('status', 'featured')
+    .select('id, title, subtitle, cover_image, category_id, categories(name), seo_slug, status, is_featured, featured_position, created_at')
+    .or('is_featured.eq.true,status.eq.featured')
+    .in('status', ['active', 'featured'])
+    .order('featured_position', { ascending: true, nullsFirst: false })
     .limit(limit)
 
   if (error) {
@@ -118,6 +121,54 @@ export async function fetchFeaturedListings(limit = 12): Promise<PublicListing[]
     ...row,
     category: Array.isArray(row.categories) ? row.categories[0]?.name : row.categories?.name ?? 'hotel'
   })) as PublicListing[]
+}
+
+/**
+ * Fetch featured listings for a single category — used by the public portal hero carousel.
+ * Returns listings where is_featured=true AND status='active', ordered by featured_position.
+ *
+ * @param categoryName  Exact category name (e.g. 'Hotels', 'Beaches')
+ * @param detailPageBase  Base URL for detail pages (e.g. 'Detailed-Hotel')
+ */
+export async function fetchFeaturedCategoryListings(
+  categoryName: string,
+  detailPageBase: string,
+  limit = 6
+): Promise<PortalListing[]> {
+  const { data: cat } = await supabase
+    .from('categories')
+    .select('id')
+    .ilike('name', categoryName)
+    .eq('type', 'listing')
+    .single()
+
+  if (!cat) return []
+
+  const { data, error } = await supabase
+    .from('listings')
+    .select('id, title, subtitle, cover_image, seo_slug, status, category_tags, feature_post_type, categories(name)')
+    .eq('category_id', cat.id)
+    .eq('is_featured', true)
+    .eq('status', 'active')
+    .order('featured_position', { ascending: true, nullsFirst: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('[listings.service] fetchFeaturedCategoryListings:', error.message)
+    return []
+  }
+
+  return (data ?? []).map((l: any) => ({
+    id: l.id,
+    title: l.title ?? '',
+    subtitle: l.subtitle ?? '',
+    image: l.cover_image ?? '',
+    rating: 0,
+    href: `/${detailPageBase}/${l.seo_slug ?? l.id}`,
+    category: (l.categories as any)?.name ?? categoryName,
+    types: Array.isArray(l.category_tags) ? l.category_tags : [],
+    feature_post_type: l.feature_post_type ?? 'reserve',
+  }))
 }
 
 // ─── Portal: fetch real listings by category name (for public pages) ─────────
