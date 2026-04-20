@@ -149,10 +149,10 @@ export default async function TeamMemberPage({ params }: Props) {
         {/* Bio */}
         <div className='max-w-4xl space-y-4'>
           {member.bio && (
-            <p className='text-base leading-relaxed text-foreground/80'>{member.bio}</p>
+            <p className='text-base leading-relaxed text-slate-900'>{member.bio}</p>
           )}
           {member.bio_extended && (
-            <p className='text-base leading-relaxed text-foreground/80'>{member.bio_extended}</p>
+            <p className='text-base leading-relaxed text-slate-900'>{member.bio_extended}</p>
           )}
           {!member.bio && !member.bio_extended && (
             <p className='italic text-muted-foreground'>No bio available yet.</p>
