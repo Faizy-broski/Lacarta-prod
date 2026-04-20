@@ -821,13 +821,13 @@ const HomePage = () => {
               label: "Beaches",
               img: img2,
               color: "bg-gradient-to-l from-green-light to-green",
-              href: "/Beaches",
+              href: "/beaches",
             },
             {
               label: "Activities",
               img: img3,
               color: "bg-gradient-to-b from-red to-red-light",
-              href: "/Activities",
+              href: "/activities",
             },
             {
               label: "Tours & Sightseeing",
@@ -839,13 +839,13 @@ const HomePage = () => {
               label: "Boat Rentals",
               img: img5,
               color: "bg-gradient-to-l from-green-light to-green",
-              href: "/Boating",
+              href: "/boating",
             },
             {
               label: "Gastronomy",
               img: img6,
               color: "bg-gradient-to-b from-red to-red-light",
-              href: "/Gastronomy",
+              href: "/gastronomy",
             },
           ].map((item, idx) => (
             <Link

@@ -43,7 +43,7 @@ export default function TeamMemberCard({ member }: TeamMemberCardProps) {
           />
         </ImageWrapper>
       </div>
-      <h3 className="font-antigua text-xl sm:text-2xl font-black" style={{ color: "#000" }}>
+      <h3 className="font-antigua text-3xl sm:text-4xl font-black leading-tight" style={{ color: "#000" }}>
         {profileHref ? (
           <Link href={profileHref} className="hover:text-gold transition-colors">
             {member.name}
@@ -52,59 +52,62 @@ export default function TeamMemberCard({ member }: TeamMemberCardProps) {
           member.name
         )}
       </h3>
-      <p className="text-sm mt-0.5 mb-3" style={{ color: "#555" }}>
+      <p className="text-lg font-semibold mt-2 mb-5" style={{ color: "#222" }}>
         {member.role}
       </p>
-      {member.socials && (
-        <div className="flex items-center gap-3">
-          {member.socials.email && (
+      <div className="flex items-center gap-3">
+        {[
+          {
+            href: member.socials?.email ? `mailto:${member.socials.email}` : null,
+            Icon: Mail,
+            label: "Email",
+            activeClass: "bg-[#fff9e6] text-[#c28710] hover:bg-[#d0a439] hover:text-white",
+            inactiveClass: "bg-[#f5f5f5] text-[#a1a1aa] cursor-not-allowed",
+          },
+          {
+            href: member.socials?.twitter ?? null,
+            Icon: Twitter,
+            label: "X",
+            activeClass: "bg-[#e8f7ff] text-[#1da1f2] hover:bg-[#1da1f2] hover:text-white",
+            inactiveClass: "bg-[#f5f5f5] text-[#a1a1aa] cursor-not-allowed",
+          },
+          {
+            href: member.socials?.instagram ?? null,
+            Icon: Instagram,
+            label: "Instagram",
+            activeClass: "bg-gradient-to-tr from-[#f58529] via-[#dd2a7b] to-[#8134af] text-white hover:opacity-90",
+            inactiveClass: "bg-[#f5f5f5] text-[#a1a1aa] cursor-not-allowed",
+          },
+          {
+            href: member.socials?.linkedin ?? null,
+            Icon: Linkedin,
+            label: "LinkedIn",
+            activeClass: "bg-[#e8f4f9] text-[#0077b5] hover:bg-[#0077b5] hover:text-white",
+            inactiveClass: "bg-[#f5f5f5] text-[#a1a1aa] cursor-not-allowed",
+          },
+        ].map(({ href, Icon, label, activeClass, inactiveClass }) =>
+          href ? (
             <a
-              href={`mailto:${member.socials.email}`}
-              aria-label={`Email ${member.name}`}
-              className="hover:text-gold transition-colors"
-              style={{ color: "#000" }}
+              key={label}
+              href={href}
+              target={href.startsWith("mailto:") ? undefined : "_blank"}
+              rel={href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+              aria-label={`${label} ${member.name}`}
+              className={`inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#ddd] shadow-sm transition ${activeClass}`}
             >
-              <Mail size={18} />
+              <Icon size={24} />
             </a>
-          )}
-          {member.socials.twitter && (
-            <a
-              href={member.socials.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${member.name} on X`}
-              className="hover:text-gold transition-colors"
-              style={{ color: "#000" }}
+          ) : (
+            <span
+              key={label}
+              aria-label={`${label} not available`}
+              className={`inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#ddd] shadow-sm ${inactiveClass}`}
             >
-              <Twitter size={18} />
-            </a>
-          )}
-          {member.socials.instagram && (
-            <a
-              href={member.socials.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${member.name} on Instagram`}
-              className="hover:text-gold transition-colors"
-              style={{ color: "#000" }}
-            >
-              <Instagram size={18} />
-            </a>
-          )}
-          {member.socials.linkedin && (
-            <a
-              href={member.socials.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${member.name} on LinkedIn`}
-              className="hover:text-gold transition-colors"
-              style={{ color: "#000" }}
-            >
-              <Linkedin size={18} />
-            </a>
-          )}
-        </div>
-      )}
+              <Icon size={24} />
+            </span>
+          )
+        )}
+      </div>
     </div>
   );
 }

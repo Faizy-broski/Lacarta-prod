@@ -134,21 +134,24 @@ export default function ListingPage({
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`px-2 transition font-antigua
-                    ${currentPage === page ? 'text-[#d0a439]' : 'text-black hover:text-[#d0a439]'}`}
+                  className={`rounded-full px-3 py-1.5 transition font-antigua border border-[#d0a439] shadow-sm ${
+                    currentPage === page
+                      ? 'bg-[#d0a439] text-white'
+                      : 'bg-white text-black hover:bg-[#d0a439] hover:text-white'
+                  }`}
                 >
                   {page}
                 </button>
               ))}
 
             {currentPage + 2 < totalPages && (
-              <span className='px-2 font-antigua'>...</span>
+              <span className='px-2 font-antigua text-gray-500'>...</span>
             )}
 
             {currentPage + 2 < totalPages && (
               <button
                 onClick={() => setCurrentPage(totalPages)}
-                className='px-2 hover:text-[#d0a439] font-antigua'
+                className='rounded-full px-3 py-1.5 border border-[#d0a439] bg-white text-black hover:bg-[#d0a439] hover:text-white transition font-antigua shadow-sm'
               >
                 {totalPages}
               </button>
@@ -157,7 +160,7 @@ export default function ListingPage({
             {currentPage < totalPages && (
               <button
                 onClick={() => setCurrentPage((p) => p + 1)}
-                className='ml-2 hover:text-[#d0a439] font-antigua'
+                className='ml-2 rounded-full px-4 py-1.5 bg-[#d0a439] text-white font-antigua shadow-sm transition hover:bg-[#b69225]'
               >
                 Next »
               </button>
