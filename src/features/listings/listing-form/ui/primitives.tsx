@@ -22,7 +22,7 @@ export function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <Card className='rounded-xl'>
+    <Card className='rounded-xl bg-white text-black dark:bg-white dark:text-black border border-border'>
       <CardHeader>
         <div className='flex items-center gap-2.5'>
           <span className='text-gold p-2 rounded-md bg-gold/10'>{icon}</span>

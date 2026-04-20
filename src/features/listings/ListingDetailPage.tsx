@@ -58,6 +58,14 @@ interface ReservationLink {
   url: string
 }
 
+interface BookWithUs {
+  title?: string
+  button_link?: string
+  button_text?: string
+  why_title?: string
+  why_link?: string
+}
+
 interface WeeklySlot {
   open: string
   close: string
@@ -112,6 +120,9 @@ interface Listing {
   deals?: Deal[]
   menu_items?: MenuItem[]
   reservation_links?: ReservationLink[]
+  direct_links?: ReservationLink[]
+  also_available_on?: ReservationLink[]
+  book_with_us?: BookWithUs
   weekly_hours?: WeeklyHours
   start_time?: string
   end_time?: string
@@ -151,6 +162,34 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
       {children}
     </div>
   )
+}
+
+function normalizeLinkArray(value: any): Array<ReservationLink> {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (!item) return null
+        if (typeof item === 'string') {
+          return { label: item.replace(/^https?:\/\//, '').replace(/\/.*$/, ''), url: item }
+        }
+        const url = item.url || item.link || item.website || ''
+        if (!url) return null
+        return {
+          label: item.platform || item.name || item.label || item.title || url.replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
+          url,
+        }
+      })
+      .filter((item): item is ReservationLink => Boolean(item && item.url))
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((url) => ({ label: url.replace(/^https?:\/\//, '').replace(/\/.*$/, ''), url }))
+  }
+  return []
 }
 
 function InfoRow({ icon, label, value, href }: {
@@ -215,11 +254,20 @@ export function ListingDetailPage() {
     router.push('/dashboard/listings')
   }
 
+  const bookingLinks = listing
+    ? normalizeLinkArray([
+      ...(listing.reservation_links ?? []),
+      ...(listing.direct_links ?? []),
+      ...(listing.also_available_on ?? []),
+      ...(listing.website ? [{ label: 'Website', url: listing.website }] : []),
+    ])
+    : []
+
   if (loading) {
     return (
       <>
         <Header />
-        <Main>
+        <Main fluid>
           <div className='flex h-96 items-center justify-center'>
             <Loader2 className='h-8 w-8 animate-spin text-amber-500' />
           </div>
@@ -232,7 +280,7 @@ export function ListingDetailPage() {
     return (
       <>
         <Header />
-        <Main>
+        <Main fluid>
           <div className='flex h-96 flex-col items-center justify-center gap-3 text-muted-foreground'>
             <p className='text-lg font-medium'>Listing not found</p>
             <button onClick={() => router.push('/dashboard/listings')} className='text-sm text-amber-600 hover:underline'>
@@ -249,11 +297,11 @@ export function ListingDetailPage() {
   return (
     <>
       <Header />
-      <Main>
+      <Main fluid>
         <div className='min-h-screen bg-background text-foreground font-sans'>
           <div className='sticky top-0 z-10 border-b bg-card px-6 py-4 shadow-sm'>
-            <div className='mx-auto flex max-w-5xl items-center justify-between'>
-              <div className='flex items-center gap-3'>
+            <div className='flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+              <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
                 <button
                   onClick={() => router.push('/dashboard/listings')}
                   className='rounded-lg p-2 text-muted-foreground transition hover:bg-muted'
@@ -299,7 +347,7 @@ export function ListingDetailPage() {
             </div>
           </div>
 
-          <div className='mx-auto max-w-5xl space-y-6 px-6 py-6'>
+          <div className='space-y-6 px-6 py-6'>
             {allImages.length > 0 && (
               <div className='overflow-hidden rounded-2xl border bg-card shadow-sm'>
                 <div className='relative h-72 w-full bg-muted'>
@@ -327,8 +375,8 @@ export function ListingDetailPage() {
               </div>
             )}
 
-            <div className='grid grid-cols-3 gap-6'>
-              <div className='col-span-2 space-y-6'>
+            <div className='grid grid-cols-1 gap-6 lg:grid-cols-3'>
+              <div className='col-span-1 space-y-6 lg:col-span-2'>
                 {(listing.subtitle || listing.description) && (
                   <Section icon={<Tag className='h-4 w-4' />} title='About'>
                     {listing.subtitle && <p className='mb-2 text-base font-medium text-gray-700'>{listing.subtitle}</p>}
@@ -360,14 +408,14 @@ export function ListingDetailPage() {
                       {listing.room_types.map((room: any, i: number) => (
                         <div key={i} className='flex gap-4 rounded-xl border border-border bg-muted/20 p-3'>
                           {room.image && (
-                            <img src={room.image} alt={room.name} className='h-20 w-32 flex-shrink-0 rounded-lg object-cover' />
+                            <img src={room.image} alt={room.room_type || room.name || 'Room type'} className='h-20 w-32 flex-shrink-0 rounded-lg object-cover' />
                           )}
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center justify-between'>
-                              <p className='text-sm font-semibold text-foreground truncate'>{room.name}</p>
+                              <p className='text-sm font-semibold text-foreground truncate'>{room.room_type || room.name}</p>
                               {room.price && <p className='text-sm font-bold text-amber-600 flex-shrink-0'>${Number(room.price).toLocaleString()}</p>}
                             </div>
-                            {room.description && <p className='mt-1 text-xs text-muted-foreground line-clamp-2'>{room.description}</p>}
+                            {(room.option || room.description) && <p className='mt-1 text-xs text-muted-foreground line-clamp-2'>{room.option || room.description}</p>}
                             <div className='mt-2 flex flex-wrap gap-2 text-[10px] text-muted-foreground'>
                               {room.size && <span className='rounded bg-muted px-1.5 py-0.5'>Size: {room.size}</span>}
                               {room.beds && <span className='rounded bg-muted px-1.5 py-0.5'>Beds: {room.beds}</span>}
@@ -546,7 +594,9 @@ export function ListingDetailPage() {
                   <Section icon={<CheckCircle2 className='h-4 w-4' />} title={listing.whats_included.title || 'What’s Included'}>
                     <ul className='grid gap-2 sm:grid-cols-2 list-inside list-disc text-sm text-foreground'>
                       {listing.whats_included.items.map((item: any, i: number) => (
-                        <li key={i}>{item.content}</li>
+                        <li key={i}>
+                          {typeof item === 'string' ? item : item?.content ?? item?.title ?? String(item)}
+                        </li>
                       ))}
                     </ul>
                   </Section>
@@ -556,7 +606,9 @@ export function ListingDetailPage() {
                   <Section icon={<Lightbulb className='h-4 w-4' />} title={listing.important_info.title || 'Important Information'}>
                     <ul className='space-y-2 list-inside list-disc text-sm text-muted-foreground'>
                       {listing.important_info.items.map((item: any, i: number) => (
-                        <li key={i}>{item.content}</li>
+                        <li key={i}>
+                          {typeof item === 'string' ? item : item?.content ?? item?.title ?? String(item)}
+                        </li>
                       ))}
                     </ul>
                   </Section>
@@ -706,11 +758,11 @@ export function ListingDetailPage() {
                   )}
                 </div>
 
-                {listing.reservation_links && listing.reservation_links.length > 0 && (
+                {bookingLinks.length > 0 && (
                   <div className='rounded-2xl border bg-card p-5 shadow-sm'>
                     <p className='mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground'>Book Online</p>
                     <div className='space-y-2'>
-                      {listing.reservation_links.map((link, i) => (
+                      {bookingLinks.map((link, i) => (
                         <a
                           key={i}
                           href={link.url}
@@ -745,18 +797,6 @@ export function ListingDetailPage() {
                   </div>
                 )}
 
-                {listing.direct_links && listing.direct_links.length > 0 && (
-                  <div className='rounded-2xl border bg-card p-5 shadow-sm'>
-                    <p className='mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground'>Direct Links</p>
-                    <div className='space-y-2'>
-                      {listing.direct_links.map((link: any, i: number) => (
-                        <a key={i} href={link.url} target='_blank' rel='noopener noreferrer' className='flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100'>
-                          {link.label} <ExternalLink className='h-3.5 w-3.5 text-muted-foreground' />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {listing.category_tags && listing.category_tags.length > 0 && (
                   <div className='rounded-2xl border bg-card p-5 shadow-sm'>

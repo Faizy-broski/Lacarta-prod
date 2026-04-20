@@ -645,6 +645,42 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
       ? listing.deals
       : []
 
+  const currentDeal = listingDeals[dealIdx]
+  const currentDealDescription =
+    currentDeal?.description ||
+    currentDeal?.offers_description ||
+    currentDeal?.subtitle ||
+    ''
+  const currentDealTag =
+    currentDeal?.deal_type
+      ? currentDeal.deal_type.replace(/_/g, ' ').toUpperCase()
+      : currentDeal?.coupon_code || ''
+  const currentDealValid =
+    currentDeal?.start_date && currentDeal?.end_date
+      ? `${currentDeal.start_date} to ${currentDeal.end_date}`
+      : currentDeal?.discount
+      ? `${currentDeal.discount} OFF`
+      : currentDeal?.coupon_code
+      ? `Code: ${currentDeal.coupon_code}`
+      : ''
+
+  const weeklyHoursDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
+  const weeklyHours = weeklyHoursDays.map((day) => {
+    const dayData = listing.weekly_hours?.[day] || {}
+    const slots = Array.isArray(dayData.slots)
+      ? dayData.slots.filter((slot: any) => slot?.start || slot?.end)
+      : []
+    return {
+      day,
+      label: day[0].toUpperCase() + day.slice(1),
+      open: !!dayData.open,
+      slots,
+    }
+  })
+  const hasWeeklyHours = weeklyHours.some((day) => day.open && day.slots.length > 0)
+  const listingRoadMap = Array.isArray(listing.road_map) ? listing.road_map : []
+  const hasRoadMap = listingRoadMap.length > 0
+
   const alsoAvailableLinks = normalizeLinkArray(
     listing.also_available_on ||
       listing.direct_links ||
@@ -652,6 +688,13 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
       listing.extra_social_links ||
       (listing.website ? [{ platform: 'Website', url: listing.website }] : [])
   )
+
+  const whatsIncludedItems = Array.isArray(listing?.whats_included?.items)
+    ? listing.whats_included.items
+    : []
+  const importantInfoItems = Array.isArray(listing?.important_info?.items)
+    ? listing.important_info.items
+    : []
 
   const serviceColumns = [
     {
@@ -848,6 +891,46 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
                 />
               </div>
 
+              {hasRoadMap && (
+              <div className="bg-[#f8f5e9] rounded-2xl p-5 md:p-8 border border-gold-light shadow-sm relative">
+                <span className="absolute -top-3 left-6 bg-gradient-to-r from-gold to-gold-light text-white text-xs font-bold px-3 py-1 rounded-full">
+                  Road Map
+                </span>
+                <div className="mt-4 space-y-6">
+                  {listingRoadMap.map((day: any, dayIndex: number) => (
+                    <div key={dayIndex} className="rounded-2xl bg-white p-4 border border-amber-100 shadow-sm">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="w-9 h-9 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">
+                          {String(day.day ?? dayIndex + 1).padStart(2, '0')}
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-black font-antigua">
+                            {day.title || `Day ${dayIndex + 1}`}
+                          </p>
+                          {day.subtitle && <p className="text-xs text-gray-500">{day.subtitle}</p>}
+                        </div>
+                      </div>
+                      {Array.isArray(day.items) && day.items.length > 0 && (
+                        <div className="space-y-3">
+                          {day.items.map((slot: any, slotIndex: number) => (
+                            <div key={slotIndex} className="flex items-start gap-3">
+                              <div className="min-w-[68px] text-[10px] md:text-xs text-amber-700 font-semibold">
+                                {slot.time || slot.start || ''}
+                              </div>
+                              <div>
+                                <p className="text-sm text-black font-medium">{slot.activity || slot.description || ''}</p>
+                                {slot.notes && <p className="text-xs text-gray-500 mt-0.5">{slot.notes}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              )}
+
               {/* Day Package */}
               <h2 className="text-2xl md:text-3xl font-antigua font-bold text-black">
                 {listing.feature_title || 'Our specialities'}
@@ -888,6 +971,35 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
                   ))}
                 </div>
               </div>
+              )}
+
+              {Array.isArray(listing.room_types) && listing.room_types.length > 0 && (
+                <div className="bg-white rounded-2xl p-5 md:p-8 border border-amber-100 shadow-sm">
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">
+                        Room Types
+                      </p>
+                      <h2 className="text-xl md:text-2xl font-extrabold text-black font-antigua">
+                        {listing.room_types_title || 'Our Room Types'}
+                      </h2>
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {listing.room_types.map((room: any, i: number) => (
+                      <div key={i} className="rounded-2xl border border-amber-100 bg-[#F7F3E6] p-4">
+                        <p className="text-sm font-semibold text-black">
+                          {room.room_type || room.name || `Room ${i + 1}`}
+                        </p>
+                        {room.option && (
+                          <p className="mt-2 text-sm text-gray-600">
+                            {room.option}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* Menu Tabs */}
@@ -1000,6 +1112,27 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
                     </p>
                   </div>
                 </div>
+                {hasWeeklyHours && (
+                <div className="bg-white rounded-2xl p-4 md:p-5 border border-gold-light shadow-sm mt-4">
+                  <span className="block text-xs uppercase tracking-widest font-bold text-gray-500 mb-3">
+                    Weekly Hours
+                  </span>
+                  <div className="space-y-2">
+                    {weeklyHours.map((day) => (
+                      <div key={day.day} className="flex items-center justify-between gap-3 px-2 py-2 rounded-lg bg-[#f8f5e9]">
+                        <span className={day.open ? 'text-sm font-semibold text-black' : 'text-sm text-gray-400'}>
+                          {day.label}
+                        </span>
+                        <span className="text-[10px] md:text-xs text-gray-600 text-right">
+                          {day.open && day.slots.length > 0
+                            ? day.slots.map((slot: any) => `${slot.start || ''}${slot.start && slot.end ? ' – ' : ''}${slot.end || ''}`).join(', ')
+                            : 'Closed'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                )}
                 {/* Beach Conditions — beach-specific extra info */}
                 {/* <div className="grid grid-cols-3 gap-2 mt-3 md:mt-4 border-t border-amber-100 pt-3 md:pt-4">
                                     {[
@@ -1134,25 +1267,27 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
                     <div className="flex items-start justify-between gap-2 relative">
                       <div className="flex-1  space-y-3 mb-3">
                         <p className="font-bold text-black text-xs md:text-sm font-antigua">
-                          {listingDeals[dealIdx]?.title}
+                          {currentDeal?.title}
                         </p>
                         <p className="text-[10px] md:text-xs text-gray-500 mt-1 leading-relaxed">
-                          {listingDeals[dealIdx]?.desc}
+                          {currentDealDescription}
                         </p>
+                        {currentDeal?.offers_title && (
+                          <p className="text-[10px] md:text-xs text-amber-700 font-semibold mt-1">
+                            {currentDeal.offers_title}
+                          </p>
+                        )}
                       </div>
-                      {/* <span className="bg-gold text-white text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded shrink-0">
-                        {listingDeals[dealIdx]?.tag}
-                      </span> */}
                     </div>
-                    {listingDeals[dealIdx]?.tag && (
-                      <Badge className="absolute top-0 right-0 border-0 bg-gradient-to-r from-gold-light to-gold overflow-hidden text-white  rounded-xl rounded-tl-none rounded-br-none  text-xs">
-                        {listingDeals[dealIdx]?.tag}
+                    {currentDealTag && (
+                      <Badge className="absolute top-0 right-0 border-0 bg-gradient-to-r from-gold-light to-gold overflow-hidden text-white rounded-xl rounded-tl-none rounded-br-none text-xs">
+                        {currentDealTag}
                       </Badge>
                     )}
                     <div className="mt-auto flex items-center justify-between text-[10px] md:text-xs ">
                       <div className="flex items-center gap-2 text-gray-500">
                         <Calendar className="w-3 h-3" />
-                        {listingDeals[dealIdx]?.valid}
+                        {currentDealValid}
                       </div>
 
                       <button className="text-[#c89b2c] font-semibold flex items-center gap-2">
@@ -1253,6 +1388,28 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
                 Secure payments, Verified listings, 24/7 support and Exclusive
                 local experiences curated by Cartagena insiders.
               </p>
+
+              {whatsIncludedItems.length > 0 && (
+                <div className="rounded-2xl p-3 md:p-5 border border-gold-light bg-white">
+                  <p className="font-bold text-black text-xs md:text-sm mb-3 font-antigua">What&apos;s Included</p>
+                  <ul className="list-inside list-disc space-y-2 text-[10px] md:text-xs text-gray-600">
+                    {whatsIncludedItems.map((item: any, i: number) => (
+                      <li key={i}>{typeof item === 'string' ? item : item?.content ?? item?.title ?? String(item)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {importantInfoItems.length > 0 && (
+                <div className="rounded-2xl p-3 md:p-5 border border-gold-light bg-white">
+                  <p className="font-bold text-black text-xs md:text-sm mb-3 font-antigua">Important to Know</p>
+                  <ul className="list-inside list-disc space-y-2 text-[10px] md:text-xs text-gray-600">
+                    {importantInfoItems.map((item: any, i: number) => (
+                      <li key={i}>{typeof item === 'string' ? item : item?.content ?? item?.title ?? String(item)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Booking Info */}
               <div className="rounded-2xl p-3 md:p-5 relative">

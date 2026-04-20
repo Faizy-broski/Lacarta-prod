@@ -44,6 +44,11 @@ function readMinutes(body: string | null) {
   return Math.max(1, Math.ceil(words / 200))
 }
 
+function coverImage(raw: string | null): string | null {
+  if (!raw) return null
+  return raw.split('|')[0].trim() || null
+}
+
 // ── Article card ─────────────────────────────────────────────────────────────
 function ArticleCard({ article }: { article: Article }) {
   return (
@@ -52,8 +57,8 @@ function ArticleCard({ article }: { article: Article }) {
       className='flex gap-3 bg-white p-3 rounded cursor-pointer hover:shadow-lg transition relative group'
     >
       <div className='flex-shrink-0 rounded overflow-hidden w-[90px] h-[90px]'>
-        {article.cover_image ? (
-          <img src={article.cover_image} alt={article.title} className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300' />
+        {coverImage(article.cover_image) ? (
+          <img src={coverImage(article.cover_image)!} alt={article.title} className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300' />
         ) : (
           <div className='w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs'>No image</div>
         )}
@@ -93,8 +98,8 @@ function ArticleCard({ article }: { article: Article }) {
 function FeaturedCard({ article }: { article: Article }) {
   return (
     <Link href={`/blog/${article.slug}`} className='relative overflow-hidden block h-72 md:h-auto md:[grid-row:1/3] group'>
-      {article.cover_image ? (
-        <img src={article.cover_image} alt={article.title} className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' />
+      {coverImage(article.cover_image) ? (
+        <img src={coverImage(article.cover_image)!} alt={article.title} className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' />
       ) : (
         <div className='w-full h-full bg-gray-300' />
       )}
@@ -133,8 +138,8 @@ function FeaturedCard({ article }: { article: Article }) {
 function GridCard({ article }: { article: Article }) {
   return (
     <Link href={`/blog/${article.slug}`} className='overflow-hidden block relative group'>
-      {article.cover_image ? (
-        <img src={article.cover_image} alt={article.title} className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300' />
+      {coverImage(article.cover_image) ? (
+        <img src={coverImage(article.cover_image)!} alt={article.title} className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300' />
       ) : (
         <div className='w-full h-full bg-gray-200' />
       )}
@@ -177,8 +182,8 @@ function FeaturedCarousel({ articles }: { articles: Article[] }) {
           {articles.map((article) => (
             <div key={article.id} className='relative min-w-0 flex-[0_0_100%]'>
               <Link href={`/blog/${article.slug}`} className='block relative h-[420px] md:h-[560px]'>
-                {article.cover_image ? (
-                  <img src={article.cover_image} alt={article.title} className='h-full w-full object-cover' />
+                {coverImage(article.cover_image) ? (
+                  <img src={coverImage(article.cover_image)!} alt={article.title} className='h-full w-full object-cover' />
                 ) : (
                   <div className='h-full w-full bg-gray-300' />
                 )}
@@ -251,8 +256,8 @@ function RecentCard({ article }: { article: Article }) {
   return (
     <Link href={`/blog/${article.slug}`} className='flex gap-4 group'>
       <div className='flex-shrink-0 w-24 h-20 rounded-xl overflow-hidden'>
-        {article.cover_image ? (
-          <img src={article.cover_image} alt='' className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300' />
+        {coverImage(article.cover_image) ? (
+          <img src={coverImage(article.cover_image)!} alt='' className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300' />
         ) : (
           <div className='w-full h-full bg-gray-200' />
         )}

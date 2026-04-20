@@ -30,6 +30,11 @@ export interface Event {
 export type EventInsert = Omit<Event, 'id' | 'created_at' | 'updated_at' | 'creator' | 'category'>
 export type EventUpdate = Partial<EventInsert>
 
+export interface PaginatedResult<T> {
+  data: T[]
+  count: number
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function today(): string {
@@ -120,6 +125,27 @@ export async function fetchUpcomingEvents(limit = 5): Promise<Event[]> {
 
   if (error) { console.error('[events.service] fetchUpcomingEvents:', error.message); return [] }
   return data as Event[]
+}
+
+/** Published upcoming events with page-based pagination. */
+export async function fetchUpcomingEventsPage(page = 1, pageSize = 10): Promise<PaginatedResult<Event>> {
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await supabase
+    .from('events')
+    .select('*, creator:users!created_by(full_name), category:categories!category_id(name)', { count: 'exact' })
+    .eq('status', 'published')
+    .gte('event_date', today())
+    .order('event_date', { ascending: true })
+    .range(from, to)
+
+  if (error) {
+    console.error('[events.service] fetchUpcomingEventsPage:', error.message)
+    return { data: [], count: 0 }
+  }
+
+  return { data: (data ?? []) as Event[], count: count ?? 0 }
 }
 
 /** Draft and pending events — admins see all, normal users see own (also enforced by RLS). */

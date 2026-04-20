@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Edit, Eye, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Edit, Eye, Loader2, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { fetchArticles, type Article } from '@/lib/services/articles.service'
+import { toast } from 'sonner'
+import { fetchArticles, deleteArticle, type Article } from '@/lib/services/articles.service'
 
 const PAGE_SIZE = 10
 
@@ -30,6 +31,7 @@ export default function ArticleTable() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
@@ -41,6 +43,37 @@ export default function ArticleTable() {
       setLoading(false)
     })
   }, [page])
+
+  const confirmDelete = (article: Article) => {
+    toast(`Delete "${article.title}"?`, {
+      description: 'This action cannot be undone.',
+      position: 'top-center',
+      action: {
+        label: 'Delete',
+        onClick: () => performDelete(article),
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+      actionButtonStyle: { backgroundColor: '#ef4444', color: '#fff' },
+      duration: 8000,
+    })
+  }
+
+  const performDelete = async (article: Article) => {
+    setDeletingId(article.id)
+    try {
+      await deleteArticle(article.id)
+      setArticles((prev) => prev.filter((a) => a.id !== article.id))
+      setTotal((t) => t - 1)
+      toast.success('Article deleted successfully.')
+    } catch {
+      toast.error('Failed to delete article. Please try again.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const authorDisplay = (article: Article) => {
     const a = article.author
@@ -158,6 +191,19 @@ export default function ArticleTable() {
                             title='Edit article'
                           >
                             <Edit className='h-4 w-4' />
+                          </Button>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-muted-foreground hover:text-destructive'
+                            onClick={() => confirmDelete(article)}
+                            disabled={deletingId === article.id}
+                            title='Delete article'
+                          >
+                            {deletingId === article.id
+                              ? <Loader2 className='h-4 w-4 animate-spin' />
+                              : <Trash2 className='h-4 w-4' />
+                            }
                           </Button>
                         </div>
                       </TableCell>

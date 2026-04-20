@@ -52,15 +52,18 @@
     @media (max-width: 480px) {
       position: absolute;
       top: auto;
-      height: calc(var(--tt-toolbar-height) + var(--tt-safe-area-bottom));
+      height: auto;
+      max-height: calc(2 * var(--tt-toolbar-height) + var(--tt-safe-area-bottom));
       border-top: 1px solid var(--tt-toolbar-border-color);
       border-bottom: none;
-      padding: 0 0.5rem var(--tt-safe-area-bottom);
-      flex-wrap: nowrap;
+      padding: 0.5rem 0.5rem calc(var(--tt-safe-area-bottom) + 0.5rem);
+      flex-wrap: wrap;
       justify-content: flex-start;
+      align-items: flex-start;
 
       .tiptap-toolbar-group {
         flex: 0 0 auto;
+        flex-wrap: wrap;
       }
     }
   }

@@ -5,7 +5,7 @@ import { Clock, MapPin, MoreVertical, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { fetchUpcomingEvents, type Event } from '@/lib/services/events.service'
+import { fetchUpcomingEventsPage, type Event } from '@/lib/services/events.service'
 
 const CATEGORY_COLORS: Record<string, string> = {
   Music: 'bg-purple-100 text-purple-700',
@@ -43,20 +43,32 @@ function statusLabel(status: Event['status']): string {
 
 export default function UpcomingEvents() {
   const [events, setEvents] = useState<Event[]>([])
+  const [totalEvents, setTotalEvents] = useState(0)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const pageSize = 6
+
+  const totalPages = Math.max(1, Math.ceil(totalEvents / pageSize))
 
   useEffect(() => {
-    fetchUpcomingEvents(6).then((data) => {
-      setEvents(data)
-      setLoading(false)
-    })
-  }, [])
+    setLoading(true)
+    fetchUpcomingEventsPage(page, pageSize)
+      .then(({ data, count }) => {
+        setEvents(data)
+        setTotalEvents(count)
+      })
+      .catch(() => {
+        setEvents([])
+        setTotalEvents(0)
+      })
+      .finally(() => setLoading(false))
+  }, [page])
 
   return (
     <div>
       <div className='mb-4 flex items-center justify-between'>
         <h2 className='font-antigua text-xl font-semibold'>Upcoming Events</h2>
-        <Button variant='ghost' size='sm' className='text-red-500 hover:bg-background hover:text-red-600'>
+        <Button size='sm' className='bg-gold text-white hover:bg-gold/90 shadow-sm transition'>
           View all →
         </Button>
       </div>
@@ -139,6 +151,32 @@ export default function UpcomingEvents() {
               </Card>
             )
           })}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className='mt-4 flex items-center justify-between gap-3 text-sm'>
+          <p className='text-muted-foreground'>
+            Showing page {page} of {totalPages} ({totalEvents} upcoming events)
+          </p>
+          <div className='flex items-center gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              disabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              disabled={page >= totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
     </div>

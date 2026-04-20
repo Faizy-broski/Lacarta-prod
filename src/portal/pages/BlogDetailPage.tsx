@@ -361,6 +361,12 @@ function CommentSection({
 
 interface Props { slug: string }
 
+
+function coverImage(raw: string | null): string | null {
+  if (!raw) return null
+  return raw.split('|')[0].trim() || null
+}
+
 export default function BlogDetailPage({ slug }: Props) {
   const user = useAuthStore((s) => s.user)
   const [article, setArticle]       = useState<Article | null>(null)
@@ -437,8 +443,8 @@ export default function BlogDetailPage({ slug }: Props) {
 
       {/* ── Hero ── */}
       <div className='relative h-64 w-full overflow-hidden md:h-[380px]'>
-        {article.cover_image ? (
-          <img src={article.cover_image} alt={article.title}
+        {coverImage(article.cover_image) ? (
+          <img src={coverImage(article.cover_image)!} alt={article.title}
             className='h-full w-full object-cover' />
         ) : (
           <div className='h-full w-full bg-gray-200' />

@@ -539,7 +539,7 @@ export function RichTextEditor({
 
   return (
     <div
-      className='rounded-md border focus-within:ring-1 focus-within:ring-ring flex flex-col overflow-hidden'
+      className='w-full min-w-0 rounded-md border focus-within:ring-1 focus-within:ring-ring flex flex-col overflow-hidden'
       style={{ minHeight } as React.CSSProperties}
     >
       <EditorContext.Provider value={{ editor }}>
@@ -562,7 +562,7 @@ export function RichTextEditor({
         <EditorContent
           editor={editor}
           role='presentation'
-          className='flex-1 [&_.tiptap]:p-4 [&_.tiptap]:min-h-[inherit] [&_.tiptap]:outline-none [&_.tiptap_img]:cursor-move [&_.tiptap_img]:max-w-full'
+          className='flex-1 w-full min-w-0 [&_.tiptap]:p-4 [&_.tiptap]:min-h-[inherit] [&_.tiptap]:outline-none [&_.tiptap_img]:cursor-move [&_.tiptap_img]:max-w-full'
         />
 
         <LinkDialog editor={editor} open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} />

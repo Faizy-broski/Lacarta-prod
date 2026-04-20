@@ -97,11 +97,15 @@ export default function ListingPage({
               <Link key={cat.id} href={`${cat.href}`}>
                 <Card className='border-0 bg-transparent shadow-none p-0'>
                   <CardHeader className='p-0'>
-                    <img
-                      src={cat.image}
-                      alt={cat.title}
-                      className='h-52 w-full object-cover rounded-xl'
-                    />
+                    {cat.image ? (
+                      <img
+                        src={cat.image}
+                        alt={cat.title}
+                        className='h-52 w-full object-cover rounded-xl'
+                      />
+                    ) : (
+                      <div className='h-52 w-full rounded-xl bg-gray-200' />
+                    )}
                   </CardHeader>
                   <CardContent className='text-center p-0'>
                     <h3 className='text-lg font-extrabold text-black font-antigua uppercase'>

@@ -191,9 +191,9 @@ export function ListingsPage() {
   return (
     <>
       <Header />
-      <Main>
+      <Main fluid>
         <div className='mb-6 space-y-1'>
-          <div className='mx-auto flex max-w-7xl items-center justify-between'>
+          <div className='flex w-full items-center justify-between'>
             <div>
               <h1 className='font-antigua text-3xl font-bold tracking-tight'>Listings</h1>
               <p className='text-xs text-muted-foreground'>Manage all La Carta directory listings</p>
@@ -296,7 +296,7 @@ export function ListingsPage() {
 
         <div className='overflow-hidden rounded-xl border bg-card shadow-sm'>
           <div className='overflow-x-auto'>
-            <table className='w-full text-sm'>
+            <table className='w-full min-w-[1000px] text-sm'>
               <thead>
                 <tr className='border-b bg-muted/50'>
                   <th className='px-4 py-3 text-left font-semibold text-muted-foreground'>Title</th>
@@ -306,7 +306,7 @@ export function ListingsPage() {
                   <th className='px-4 py-3 text-left font-semibold text-muted-foreground'>Rating</th>
                   <th className='px-4 py-3 text-left font-semibold text-muted-foreground'>Status</th>
                   <th className='px-4 py-3 text-left font-semibold text-muted-foreground'>Contact</th>
-                  <th className='px-4 py-3 text-right font-semibold text-muted-foreground'>Actions</th>
+                  <th className='px-4 py-3 text-right font-semibold text-muted-foreground min-w-[120px]'>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -414,30 +414,38 @@ export function ListingsPage() {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className='px-4 py-3'>
+                      <td className='px-4 py-3 min-w-[220px]'>
                         <div className='space-y-1'>
                           {listing.email && (
                             <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
                               <Mail className='h-3 w-3 text-muted-foreground/70' />
-                              <span className='max-w-[120px] truncate'>{listing.email}</span>
+                              <span className='inline-block max-w-[180px] truncate overflow-hidden whitespace-nowrap'>{listing.email}</span>
                             </div>
                           )}
                           {listing.phone && (
                             <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
                               <Phone className='h-3 w-3 text-muted-foreground/70' />
-                              {listing.phone}
+                              <span className='inline-block max-w-[140px] truncate overflow-hidden whitespace-nowrap'>{listing.phone}</span>
                             </div>
                           )}
                           {listing.website && (
                             <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
                               <Globe className='h-3 w-3 text-muted-foreground/70' />
-                              {listing.website}
+                              <a
+                                href={listing.website}
+                                target='_blank'
+                                rel='noreferrer'
+                                className='inline-block max-w-[220px] truncate overflow-hidden whitespace-nowrap text-foreground underline-offset-2 hover:underline'
+                                title={listing.website}
+                              >
+                                {listing.website}
+                              </a>
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className='px-4 py-3'>
-                        <div className='flex items-center justify-end gap-1'>
+                      <td className='px-4 py-3 min-w-[120px]'>
+                        <div className='flex items-center justify-end gap-1 whitespace-nowrap'>
                           <button
                             onClick={() => router.push(`/dashboard/listings/${listing.id}`)}
                             className='rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground'

@@ -47,9 +47,9 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
   return (
     <ListingFormContext.Provider value={state}>
       <Header />
-      <Main>
+      <Main fluid className='bg-white text-black dark:bg-white dark:text-black'>
         {/* ── Sticky action bar ── */}
-        <div className='sticky top-0 z-10 -mx-2 -mt-6 mb-6 bg-background/95 px-2 py-3 backdrop-blur supports-backdrop-filter:bg-background/60 sm:px-2'>
+        <div className='sticky top-0 z-10 -mx-2 -mt-6 mb-6 bg-white/95 text-black dark:bg-white/95 dark:text-black px-2 py-3 backdrop-blur supports-backdrop-filter:bg-white/60 sm:px-2'>
           <div className='flex flex-col items-center justify-between gap-2 sm:flex-row'>
             <div className='flex min-w-0 items-center gap-2 self-start'>
               <Button variant='ghost' size='icon' className='shrink-0 rounded-md' onClick={() => router.back()}>
@@ -82,7 +82,7 @@ export function ListingFormPage({ fixedCategory }: { fixedCategory?: string } = 
         </div>
 
         {/* ── Form sections ── */}
-        <div className='mx-auto space-y-6'>
+        <div className='w-full max-w-full space-y-6 bg-white text-black dark:bg-white dark:text-black dark:[&_input]:bg-white dark:[&_textarea]:bg-white dark:[&_select]:bg-white dark:[&_input]:text-black dark:[&_textarea]:text-black dark:[&_select]:text-black'>
           {errors.user_id && (
             <div className='rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive'>
               {errors.user_id}

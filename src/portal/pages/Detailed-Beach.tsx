@@ -57,7 +57,7 @@ import { Button } from "@public/components/ui/button";
 import { Badge } from "@public/components/ui/badge";
 import { useListing, useNearbyListings } from "@/lib/listings.hooks";
 import { getNeighborhoodOptions } from "@public/data/filter-config";
-import { getListingImages, getListingMapSrc, normalizeStringArray } from "@/portal/lib/listing-detail-utils";
+import { getListingImages, getListingMapSrc, normalizeLinkArray, normalizeStringArray } from "@/portal/lib/listing-detail-utils";
 import ReviewSection from "@public/components/listings/ReviewSection";
 import FavoriteButton from "@public/components/listings/FavoriteButton";
 import { usePortalStore } from "@public/store/portalStore";
@@ -618,6 +618,37 @@ export default function BeachDetails({ slug }: { slug?: string }) {
       ? listing.deals
       : [];
 
+  const currentDeal = listingDeals[dealIdx];
+  const currentDealDescription =
+    currentDeal?.description ||
+    currentDeal?.offers_description ||
+    currentDeal?.subtitle ||
+    currentDeal?.desc ||
+    "";
+  const currentDealTag =
+    currentDeal?.deal_type
+      ? currentDeal.deal_type.replace(/_/g, " ").toUpperCase()
+      : currentDeal?.tag || currentDeal?.coupon_code || "";
+  const currentDealValid =
+    currentDeal?.start_date && currentDeal?.end_date
+      ? `${currentDeal.start_date} to ${currentDeal.end_date}`
+      : currentDeal?.valid ||
+        (currentDeal?.discount ? `${currentDeal.discount} OFF` : "") ||
+        currentDeal?.coupon_code ||
+        "";
+
+  const listingRoadMap = Array.isArray(listing?.road_map) ? listing.road_map : [];
+  const hasRoadMap = listingRoadMap.length > 0;
+  const whatsIncludedItems = Array.isArray(listing?.whats_included?.items) ? listing.whats_included.items : [];
+  const importantInfoItems = Array.isArray(listing?.important_info?.items) ? listing.important_info.items : [];
+
+  const bookingLinks = normalizeLinkArray(
+    listing?.reservation_links ||
+      listing?.direct_links ||
+      listing?.also_available_on ||
+      (listing?.website ? [{ platform: "Website", url: listing.website }] : [])
+  );
+
   const featureItems = keyFeatures.map((label) => ({ icon: WavesIcon, label, sub: "" }));
 
   const serviceItems = services.map((label) => ({ icon: Umbrella, label, sub: "" }));
@@ -796,57 +827,93 @@ export default function BeachDetails({ slug }: { slug?: string }) {
                 <span className="absolute -top-3 left-5 bg-gradient-to-r from-gold to-gold-light text-white text-xs font-bold px-3 py-1 rounded-full">
                   Road Map
                 </span>
-                <div className="flex items-center gap-2 mt-2 mb-4 font-antigua">
-                  <span className="text-base">
-                    <CalendarDays className="text-gold" />
-                  </span>
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-black">
-                    DAY 01
-                  </h3>
-                </div>
-                <div className="relative ml-2 md:ml-4">
-                  <div className="absolute left-1.5 top-0 bottom-0 w-0.5 bg-gold" />
-                  {[
-                    {
-                      time: "8am - 9am",
-                      desc: "Boat departure from Muelle de la Bodeguita",
-                    },
-                    {
-                      time: "9am - 10am",
-                      desc: "Arrive & set up at beach — sunbed & umbrella",
-                    },
-                    {
-                      time: "10am - 12pm",
-                      desc: "Swimming, snorkeling & beach exploration",
-                    },
-                    {
-                      time: "12pm - 2pm",
-                      desc: "Fresh seafood lunch at beachside restaurant",
-                    },
-                    {
-                      time: "2pm - 5pm",
-                      desc: "Free time — volleyball, kayaking & relaxing",
-                    },
-                    {
-                      time: "5pm - 6pm",
-                      desc: "Sunset viewing & return boat to Cartagena",
-                    },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-3 mb-3 md:mb-3.5 relative pl-6 md:pl-8"
-                    >
-                      <div className="absolute left-0 top-0 w-3 h-3 rounded-full bg-gold border-2 border-gold shadow" />
-                      <div>
-                        <p className="font-bold text-black text-xs md:text-sm font-antigua">
-                          {item.time}
-                        </p>
-                        <p className="text-[10px] md:text-xs text-gray-500">
-                          {item.desc}
-                        </p>
-                      </div>
+                <div className="mt-2 mb-4 font-antigua">
+                  {hasRoadMap ? (
+                    <>
+                      {listingRoadMap.map((day: any, dayIndex: number) => (
+                        <div key={dayIndex} className="mb-6 last:mb-0">
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className="text-base">
+                              <CalendarDays className="text-gold" />
+                            </span>
+                            <h3 className="text-2xl md:text-3xl font-extrabold text-black">
+                              {day.title || `Day ${dayIndex + 1}`}
+                            </h3>
+                          </div>
+                          <div className="relative ml-2 md:ml-4">
+                            <div className="absolute left-1.5 top-0 bottom-0 w-0.5 bg-gold" />
+                            {Array.isArray(day.items) && day.items.length > 0 ? (
+                              day.items.map((item: any, i: number) => (
+                                <div
+                                  key={i}
+                                  className="flex gap-3 mb-3 md:mb-3.5 relative pl-6 md:pl-8"
+                                >
+                                  <div className="absolute left-0 top-0 w-3 h-3 rounded-full bg-gold border-2 border-gold shadow" />
+                                  <div>
+                                    <p className="font-bold text-black text-xs md:text-sm font-antigua">
+                                      {item.time || item.start || ""}
+                                    </p>
+                                    <p className="text-[10px] md:text-xs text-gray-500">
+                                      {item.activity || item.description || item.desc || ""}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-gray-600">
+                                No road map details available for this listing.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="relative ml-2 md:ml-4">
+                      <div className="absolute left-1.5 top-0 bottom-0 w-0.5 bg-gold" />
+                      {[
+                        {
+                          time: "8am - 9am",
+                          desc: "Boat departure from Muelle de la Bodeguita",
+                        },
+                        {
+                          time: "9am - 10am",
+                          desc: "Arrive & set up at beach — sunbed & umbrella",
+                        },
+                        {
+                          time: "10am - 12pm",
+                          desc: "Swimming, snorkeling & beach exploration",
+                        },
+                        {
+                          time: "12pm - 2pm",
+                          desc: "Fresh seafood lunch at beachside restaurant",
+                        },
+                        {
+                          time: "2pm - 5pm",
+                          desc: "Free time — volleyball, kayaking & relaxing",
+                        },
+                        {
+                          time: "5pm - 6pm",
+                          desc: "Sunset viewing & return boat to Cartagena",
+                        },
+                      ].map((item, i) => (
+                        <div
+                          key={i}
+                          className="flex gap-3 mb-3 md:mb-3.5 relative pl-6 md:pl-8"
+                        >
+                          <div className="absolute left-0 top-0 w-3 h-3 rounded-full bg-gold border-2 border-gold shadow" />
+                          <div>
+                            <p className="font-bold text-black text-xs md:text-sm font-antigua">
+                              {item.time}
+                            </p>
+                            <p className="text-[10px] md:text-xs text-gray-500">
+                              {item.desc}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -1036,22 +1103,22 @@ export default function BeachDetails({ slug }: { slug?: string }) {
                       <div className="flex items-start justify-between gap-2 relative">
                         <div className="flex-1  space-y-3 mb-3">
                           <p className="font-bold text-black text-xs md:text-sm font-antigua">
-                            {listingDeals[dealIdx]?.title}
+                            {currentDeal?.title}
                           </p>
                           <p className="text-[10px] md:text-xs text-gray-500 mt-1 leading-relaxed">
-                            {listingDeals[dealIdx]?.desc}
+                            {currentDealDescription}
                           </p>
                         </div>
                       </div>
-                      {listingDeals[dealIdx]?.tag && (
+                      {currentDealTag && (
                         <Badge className="absolute top-0 right-0 border-0 bg-gradient-to-r from-gold-light to-gold overflow-hidden text-white  rounded-xl rounded-tl-none rounded-br-none  text-xs">
-                          {listingDeals[dealIdx]?.tag}
+                          {currentDealTag}
                         </Badge>
                       )}
                       <div className="mt-auto flex items-center justify-between text-[10px] md:text-xs ">
                         <div className="flex items-center gap-2 text-gray-500">
                           <Calendar className="w-3 h-3" />
-                          {listingDeals[dealIdx]?.valid}
+                          {currentDealValid}
                         </div>
 
                         <button className="text-[#c89b2c] font-semibold flex items-center gap-2">
@@ -1092,22 +1159,39 @@ export default function BeachDetails({ slug }: { slug?: string }) {
                 </div>
               )}
 
-              {/* Also Available On */}
+              {/* Book Online / Also Available On */}
               <div className="bg-white rounded-2xl border border-gold-light shadow-sm p-3 md:p-4 text-center">
                 <p className="font-bold text-black text-xs md:text-sm mb-2 md:mb-3 font-antigua">
-                  Also Available On
+                  Book Online
                 </p>
-                <div className="flex justify-center gap-2 md:gap-5 flex-wrap">
-                  <button className="bg-green text-white flex  gap-3 text-[10px] md:text-xs font-normal rounded-xl px-3 md:px-5 py-2 md:py-3 hover:bg-green transition">
-                    <span>Booking.com</span> <ExternalLink size={15} />
-                  </button>
-                  <button className="bg-teal-700 flex gap-3 text-white text-[10px] md:text-xs font-normal rounded-xl px-3 md:px-75 py-2 md:py-3 hover:bg-teal-800 transition">
-                    <span>Airbnb</span> <ExternalLink size={15} />
-                  </button>
-                  <button className="bg-blue-900 flex gap-3 text-white text-[10px] md:text-xs font-normal rounded-xl px-3 md:px-5 py-2 md:py-3 hover:bg-blue-800 transition">
-                    <span>Expedia</span> <ExternalLink size={15} />
-                  </button>
-                </div>
+                {bookingLinks.length > 0 ? (
+                  <div className="flex justify-center gap-2 md:gap-5 flex-wrap">
+                    {bookingLinks.map((link, i) => (
+                      <a
+                        key={i}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-black text-white flex gap-2 items-center text-[10px] md:text-xs font-normal rounded-xl px-3 md:px-5 py-2 md:py-3 hover:bg-gray-900 transition"
+                      >
+                        <span>{link.label}</span>
+                        <ExternalLink size={15} />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex justify-center gap-2 md:gap-5 flex-wrap">
+                    <button className="bg-green text-white flex gap-3 text-[10px] md:text-xs font-normal rounded-xl px-3 md:px-5 py-2 md:py-3 hover:bg-green transition">
+                      <span>Booking.com</span> <ExternalLink size={15} />
+                    </button>
+                    <button className="bg-teal-700 flex gap-3 text-white text-[10px] md:text-xs font-normal rounded-xl px-3 md:px-5 py-2 md:py-3 hover:bg-teal-800 transition">
+                      <span>Airbnb</span> <ExternalLink size={15} />
+                    </button>
+                    <button className="bg-blue-900 flex gap-3 text-white text-[10px] md:text-xs font-normal rounded-xl px-3 md:px-5 py-2 md:py-3 hover:bg-blue-800 transition">
+                      <span>Expedia</span> <ExternalLink size={15} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Book with La Carta CTA */}
@@ -1149,6 +1233,28 @@ export default function BeachDetails({ slug }: { slug?: string }) {
                   ))}
                 </div>
               </div>
+
+              {whatsIncludedItems.length > 0 && (
+                <div className="rounded-2xl p-3 md:p-5 border border-gold-light bg-white">
+                  <p className="font-bold text-black text-xs md:text-sm mb-3 font-antigua">What&apos;s Included</p>
+                  <ul className="list-inside list-disc space-y-2 text-[10px] md:text-xs text-gray-600">
+                    {whatsIncludedItems.map((item: any, i: number) => (
+                      <li key={i}>{typeof item === 'string' ? item : item?.content ?? item?.title ?? String(item)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {importantInfoItems.length > 0 && (
+                <div className="rounded-2xl p-3 md:p-5 border border-gold-light bg-white">
+                  <p className="font-bold text-black text-xs md:text-sm mb-3 font-antigua">Important to Know</p>
+                  <ul className="list-inside list-disc space-y-2 text-[10px] md:text-xs text-gray-600">
+                    {importantInfoItems.map((item: any, i: number) => (
+                      <li key={i}>{typeof item === 'string' ? item : item?.content ?? item?.title ?? String(item)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </div>

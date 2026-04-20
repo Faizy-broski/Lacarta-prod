@@ -126,18 +126,25 @@ export default function PaginationListing({
                         className="absolute top-3 right-3"
                       />
                       <div className="absolute top-4 left-4 border-white border-4  bg-white/30 backdrop-md">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="h-10 w-16 object-cover"
+                          />
+                        ) : (
+                          <div className="h-10 w-16 bg-gray-200" />
+                        )}
+                      </div>
+                      {item.image ? (
                         <img
                           src={item.image}
                           alt={item.title}
-                          // className="aspect-2/1 w-16 object-cover"
-                          className="h-10 w-16 object-cover"
+                          className="h-48 w-full object-cover"
                         />
-                      </div>
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="h-48 w-full object-cover"
-                      />
+                      ) : (
+                        <div className="h-48 w-full bg-gray-200" />
+                      )}
 
                       <CardContent className="p-4">
                         <h6 className="text-sm font-bold text-gray-600">

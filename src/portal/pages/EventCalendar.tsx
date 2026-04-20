@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Calendar, MapPin, Clock, Loader2 } from 'lucide-react'
-import { fetchUpcomingEvents, type Event } from '@/lib/services/events.service'
+import { fetchUpcomingEventsPage, type Event } from '@/lib/services/events.service'
 
 // ─── Static editorial content ─────────────────────────────────────────────────
 // The festivals section is curated editorial content about Cartagena's culture.
@@ -95,16 +95,29 @@ function formatDay(dateStr: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function EventCalendar() {
-  const [tableEvents, setTableEvents] = useState<Event[]>([])
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([])
+  const [events, setEvents] = useState<Event[]>([])
+  const [totalEvents, setTotalEvents] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [gridPage, setGridPage] = useState(1)
+  const gridPageSize = 10
+
+  const tableEvents = events
+  const gridTotalPages = Math.max(1, Math.ceil(totalEvents / gridPageSize))
+  const gridFrom = (gridPage - 1) * gridPageSize
+  const upcomingEvents = events.slice(gridFrom, gridFrom + gridPageSize)
 
   useEffect(() => {
-    fetchUpcomingEvents(12).then((data) => {
-      setTableEvents(data.slice(0, 4))
-      setUpcomingEvents(data.slice(0, 6))
-      setLoading(false)
-    })
+    setLoading(true)
+    fetchUpcomingEventsPage(1, 100)
+      .then(({ data, count }) => {
+        setEvents(data)
+        setTotalEvents(count)
+      })
+      .catch(() => {
+        setEvents([])
+        setTotalEvents(0)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   return (
@@ -142,28 +155,30 @@ export default function EventCalendar() {
 
       {/* ── Events table ── */}
       <section className='mx-auto max-w-[1400px] px-4 py-10 md:px-10'>
+        <div className='w-full overflow-x-auto overflow-y-hidden' style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className='inline-block min-w-[1200px]'>
+            {/* Table header – desktop */}
+            <div
+              className='mb-3 hidden items-center rounded-full px-6 py-4 text-lg font-black md:grid'
+              style={{ gridTemplateColumns: '100px 170px 1fr 260px 240px 210px', backgroundColor: '#f5c542', color: '#000' }}
+            >
+              <span>Image</span>
+              <span>Category</span>
+              <span>Event</span>
+              <span>Date</span>
+              <span>Venue</span>
+              <span className='text-right'>Action</span>
+            </div>
 
-        {/* Table header – desktop */}
-        <div
-          className='mb-3 hidden items-center rounded-full px-4 py-3 text-base font-black md:grid'
-          style={{ gridTemplateColumns: '80px 140px 1fr 240px 220px 180px', backgroundColor: '#f5c542', color: '#000' }}
-        >
-          <span>Image</span>
-          <span>Category</span>
-          <span>Event</span>
-          <span>Date</span>
-          <span>Venue</span>
-          <span className='text-right'>Action</span>
-        </div>
-
-        {loading ? (
+            {loading ? (
           <div className='flex justify-center py-12'>
             <Loader2 className='h-8 w-8 animate-spin text-gray-400' />
           </div>
         ) : tableEvents.length === 0 ? (
           <p className='py-12 text-center text-gray-500'>No upcoming events scheduled. Check back soon!</p>
         ) : (
-          tableEvents.map((ev, i) => (
+          <div className='overflow-y-auto' style={{ maxHeight: 480 }}>
+          {tableEvents.map((ev, i) => (
             <div key={ev.id}>
               {/* Mobile card */}
               <div
@@ -201,8 +216,8 @@ export default function EventCalendar() {
                       href={buildGoogleCalendarUrl(ev)}
                       target='_blank'
                       rel='noopener noreferrer'
-                      className='block rounded px-4 py-1.5 text-center text-sm font-black transition hover:bg-gray-700'
-                      style={{ backgroundColor: '#111', color: '#fff' }}
+                      className='block rounded px-4 py-1.5 text-center text-sm font-black transition hover:brightness-110'
+                      style={{ backgroundColor: '#f5c542', color: '#000' }}
                     >
                       Add to Calendar
                     </a>
@@ -212,29 +227,29 @@ export default function EventCalendar() {
 
               {/* Desktop row */}
               <div
-                className='mb-2 hidden items-center rounded px-4 py-4 md:grid'
-                style={{ gridTemplateColumns: '80px 140px 1fr 240px 220px 180px', backgroundColor: i % 2 === 0 ? '#fff' : '#fafafa', border: '1px solid #eee' }}
+                className='mb-2 hidden items-center rounded px-6 py-5 md:grid'
+                style={{ gridTemplateColumns: '100px 170px 1fr 260px 240px 210px', backgroundColor: i % 2 === 0 ? '#fff' : '#fafafa', border: '1px solid #eee' }}
               >
                 {ev.cover_image ? (
-                  <img src={ev.cover_image} alt={ev.title} className='h-14 w-16 rounded object-cover' />
+                  <img src={ev.cover_image} alt={ev.title} className='h-[72px] w-[72px] rounded object-cover' />
                 ) : (
-                  <div className='h-14 w-16 rounded bg-gray-100' />
+                  <div className='h-[72px] w-[72px] rounded bg-gray-100' />
                 )}
                 <span>
                   {ev.category?.name && (
-                    <span className='rounded px-3 py-1 text-sm font-black' style={{ backgroundColor: '#f5c542', color: '#000' }}>
+                    <span className='rounded-lg px-4 py-2 text-base font-black' style={{ backgroundColor: '#f5c542', color: '#000' }}>
                       {ev.category.name}
                     </span>
                   )}
                 </span>
-                <span className='pr-4 text-base font-semibold' style={{ color: '#000' }}>{ev.title}</span>
-                <span className='text-sm' style={{ color: '#000' }}>
+                <span className='pr-4 text-lg font-bold' style={{ color: '#000' }}>{ev.title}</span>
+                <span className='text-base' style={{ color: '#000' }}>
                   {formatEventDate(ev.event_date)}{ev.start_time ? `, ${ev.start_time}` : ''}
                 </span>
-                <span className='text-sm' style={{ color: '#000' }}>{ev.location ?? '—'}</span>
-                <div className='flex flex-col gap-1.5'>
+                <span className='text-base' style={{ color: '#000' }}>{ev.location ?? '—'}</span>
+                <div className='flex flex-col gap-2'>
                   <button
-                    className='rounded px-4 py-1.5 text-center text-sm font-black transition hover:brightness-110'
+                    className='rounded px-5 py-2.5 text-center text-base font-black transition hover:brightness-110'
                     style={{ backgroundColor: '#3bbfad', color: '#000' }}
                   >
                     Book Now
@@ -243,7 +258,7 @@ export default function EventCalendar() {
                     href={buildGoogleCalendarUrl(ev)}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='block rounded px-4 py-1.5 text-center text-sm font-black transition hover:bg-gray-700'
+                    className='block rounded px-5 py-2.5 text-center text-base font-black transition hover:bg-gray-700'
                     style={{ backgroundColor: '#111', color: '#fff' }}
                   >
                     Add to Calendar
@@ -251,8 +266,11 @@ export default function EventCalendar() {
                 </div>
               </div>
             </div>
-          ))
+          ))}
+          </div>
         )}
+          </div>
+        </div>
       </section>
 
       {/* ── Gold divider ── */}
@@ -306,6 +324,33 @@ export default function EventCalendar() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {gridTotalPages > 1 && (
+          <div className='mt-8 flex flex-col items-center justify-between gap-3 sm:flex-row'>
+            <p className='text-sm text-gray-600'>
+              Showing {gridFrom + 1}–{Math.min(gridFrom + gridPageSize, totalEvents)} of {totalEvents} upcoming events
+            </p>
+            <div className='flex items-center gap-2'>
+              <button
+                type='button'
+                className='inline-flex items-center justify-center rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50'
+                disabled={gridPage <= 1}
+                onClick={() => setGridPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </button>
+              <span className='text-sm text-gray-600'>Page {gridPage} of {gridTotalPages}</span>
+              <button
+                type='button'
+                className='inline-flex items-center justify-center rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50'
+                disabled={gridPage >= gridTotalPages}
+                onClick={() => setGridPage((p) => Math.min(gridTotalPages, p + 1))}
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </section>
