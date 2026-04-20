@@ -68,26 +68,28 @@ export default function FeaturedListingsCarousel({
                   }}
                 />
 
-                {/* Category badge */}
-                <div className='absolute top-5 left-5'>
-                  <span className='rounded-full bg-gold px-3 py-1 text-xs font-black text-black'>
-                    {categoryLabel}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className='absolute bottom-0 left-0 right-0 p-6 md:p-10'>
-                  <h2 className='font-antigua font-black text-white text-xl md:text-3xl leading-snug mb-2 max-w-3xl line-clamp-2'>
-                    {listing.title}
-                  </h2>
-                  {listing.subtitle && (
-                    <p className='text-white/80 text-sm md:text-base max-w-2xl line-clamp-2 mb-4'>
-                      {listing.subtitle}
-                    </p>
-                  )}
-                  <span className='inline-block rounded-sm bg-gold px-5 py-2 text-sm font-black text-black hover:brightness-110 transition'>
-                    {listing.feature_post_type === 'menu' ? 'VIEW MENU' : 'BOOK NOW'}
-                  </span>
+                {/* Category path badge */}
+                <div className='absolute inset-x-0 bottom-0 p-6 md:p-10'>
+                  <div className='mx-auto w-full max-w-4xl text-center'>
+                    <div className='flex justify-center mb-4'>
+                      <span className='inline-flex rounded-full bg-white px-4 py-2 text-[11px] uppercase tracking-[0.35em] text-black font-semibold shadow-md shadow-black/10'>
+                        La Carta - Cartagena Culture & Tourism &gt; {categoryLabel}
+                      </span>
+                    </div>
+                    <h2 className='font-antigua font-black text-white text-3xl md:text-5xl leading-tight mb-4'>
+                      {listing.title}
+                    </h2>
+                    {listing.subtitle && (
+                      <p className='mx-auto text-white/90 text-base md:text-lg max-w-3xl mb-6'>
+                        {listing.subtitle}
+                      </p>
+                    )}
+                    <div className='flex justify-center'>
+                      <span className='inline-flex w-full md:w-auto max-w-xl items-center justify-center rounded-sm bg-[#d19b24] px-8 py-4 text-lg font-black text-white uppercase tracking-[0.14em] text-center shadow-[0_30px_60px_rgba(0,0,0,0.24)] hover:brightness-110 transition'>
+                        {listing.feature_post_type === 'menu' ? 'VIEW MENU' : 'BOOK NOW'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </Link>
             </div>

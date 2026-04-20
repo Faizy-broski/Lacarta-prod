@@ -617,7 +617,10 @@
 
 // export default HomePage;
 
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 const logo = "/assets/Logo.png.png";
 const img1 = "/assets/img1.png";
 const whatsapp = "/assets/whatsapp.svg";
@@ -658,7 +661,7 @@ import {
   Linkedin,
 } from "lucide-react";
 import HowToDoCartagena from "@public/components/HowToCartagena";
-import TopNewsCartagena from "@public/components/TopNewsCartagena.tsx";
+import TopNewsCartagena from "@public/components/TopNewsCartagena";
 import ConciergeCTA from "@public/components/ConciergeCTA";
 import Pizza from "@public/components/Pizza";
 
@@ -673,15 +676,44 @@ const catColors = {
 };
 
 const tagRoutes: Record<string, string> = {
-  Beaches: "/Beaches",
+  Beaches: "/beaches",
   Accommodations: "/hotels",
-  Boating: "/Boating",
+  Boating: "/boating",
   "Real Estate": "/real-estate",
-  Activities: "/Activities",
-  Gastronomy: "/Gastronomy",
+  Activities: "/activities",
+  Gastronomy: "/gastronomy",
 };
 
 const HomePage = () => {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) {
+      router.push('/activities');
+      return;
+    }
+
+    const normalized = query.toLowerCase();
+    const categoryMap = [
+      { route: '/activities', keywords: ['activity', 'activities', 'tour', 'tours', 'adventure', 'experience'] },
+      { route: '/hotels', keywords: ['hotel', 'accommodation', 'accommodations', 'stay', 'inn', 'bnb', 'hostel'] },
+      { route: '/beaches', keywords: ['beach', 'beaches', 'island', 'coast', 'sun'] },
+      { route: '/boating', keywords: ['boat', 'boating', 'yacht', 'water', 'sail', 'marine'] },
+      { route: '/real-estate', keywords: ['real estate', 'realestate', 'real-estate', 'property', 'villa', 'penthouse', 'home'] },
+      { route: '/gastronomy', keywords: ['food', 'restaurant', 'gastronomy', 'dining', 'eat', 'drink', 'cuisine'] },
+    ];
+
+    const match = categoryMap.find(({ keywords }) =>
+      keywords.some((keyword) => normalized.includes(keyword))
+    );
+    const destination = match?.route ?? '/activities';
+    router.push(`${destination}?q=${encodeURIComponent(query)}`);
+    setSearchQuery('');
+  };
+
   return (
     <div className="min-h-screen font-sans">
       {/* Hero Section */}
@@ -768,30 +800,40 @@ const HomePage = () => {
                   "Real Estate",
                   "Gastronomy",
                 ].map((tag) => (
-                  <Button key={tag} className="bg-white text-black font-bold shadow-xl rounded hover:bg-gray-200">
-                    <Link href={tagRoutes[tag]}>
-                      {tag}
-                    </Link>
-                  </Button>
+                  <Link
+                    key={tag}
+                    href={tagRoutes[tag]}
+                    className="inline-flex items-center justify-center rounded bg-white px-4 py-3 text-sm font-bold text-black shadow-xl transition hover:bg-gray-200"
+                  >
+                    {tag}
+                  </Link>
                 ))}
               </nav>
             </div>
 
-            <div className="flex flex-col gap-4">
+            <form className="flex flex-col gap-4" onSubmit={handleSearch}>
               <div className="flex bg-white rounded overflow-hidden p-1">
                 <input
-                  className="flex-grow p-2 bg-white text-black placeholder:px-3"
+                  className="flex-grow p-2 bg-white text-black placeholder:text-gray-500 focus:outline-none"
                   type="text"
                   placeholder="Search for Anything"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
                 />
-                <Button className="text-white hidden sm:block w-[250px] my-auto rounded px-6 py-2 font-bold bg-[#d0a439] hover:bg-[#b88f30]  transition-colors">
+                <Button
+                  type="submit"
+                  className="text-white hidden sm:inline-flex w-[250px] items-center justify-center rounded px-6 py-2 font-bold bg-[#d0a439] hover:bg-[#b88f30] transition-colors"
+                >
                   Search
                 </Button>
               </div>
-              <Button className="text-white sm:hidden w-full my-auto rounded px-6 py-2 font-bold bg-[#d0a439] hover:bg-[#b88f30]  transition-colors">
+              <Button
+                type="submit"
+                className="text-white sm:hidden w-full rounded px-6 py-2 font-bold bg-[#d0a439] hover:bg-[#b88f30] transition-colors"
+              >
                 Search
               </Button>
-            </div>
+            </form>
           </div>
 
           {/* <div>
