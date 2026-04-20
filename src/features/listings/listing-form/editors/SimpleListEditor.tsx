@@ -11,29 +11,34 @@ export function SimpleListEditor({
   titlePlaceholder,
   itemPlaceholder,
 }: {
-  section: WhatsIncludedSection | ImportantInfoSection
+  section?: WhatsIncludedSection | ImportantInfoSection
   onChange: (v: WhatsIncludedSection | ImportantInfoSection) => void
   titlePlaceholder: string
   itemPlaceholder: string
 }) {
-  const addItem = () => onChange({ ...section, items: [...section.items, ''] })
+  const safeSection: WhatsIncludedSection | ImportantInfoSection = {
+    title: section?.title ?? '',
+    items: Array.isArray(section?.items) ? section!.items : [],
+  }
+
+  const addItem = () => onChange({ ...safeSection, items: [...safeSection.items, ''] })
   const updateItem = (i: number, val: string) =>
-    onChange({ ...section, items: section.items.map((it, idx) => (idx === i ? val : it)) })
+    onChange({ ...safeSection, items: safeSection.items.map((it, idx) => (idx === i ? val : it)) })
   const removeItem = (i: number) =>
-    onChange({ ...section, items: section.items.filter((_, idx) => idx !== i) })
+    onChange({ ...safeSection, items: safeSection.items.filter((_, idx) => idx !== i) })
 
   return (
     <div className='space-y-3'>
       <FormField label='Section Title'>
         <Input
           placeholder={titlePlaceholder}
-          value={section.title}
-          onChange={(e) => onChange({ ...section, title: e.target.value })}
+          value={safeSection.title}
+          onChange={(e) => onChange({ ...safeSection, title: e.target.value })}
           className='rounded-md'
         />
       </FormField>
       <div className='space-y-2'>
-        {section.items.map((item, i) => (
+        {safeSection.items.map((item, i) => (
           <div key={i} className='flex items-center gap-2'>
             <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/20 text-xs font-bold text-gold'>
               {i + 1}

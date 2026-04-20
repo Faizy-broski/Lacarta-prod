@@ -80,6 +80,25 @@ const thumbnails = [
 
 const sliderPlaces = [];
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ').trim()
+}
+
+function extractLiItems(html: string): string[] {
+  const items: string[] = []
+  const re = /<li[^>]*>([\s\S]*?)<\/li>/gi
+  let m
+  while ((m = re.exec(html)) !== null) {
+    const text = stripHtml(m[1])
+    if (text) items.push(text)
+  }
+  return items
+}
+
 const normalizeStringArray = (value: any): string[] => {
   if (!value) return []
   if (Array.isArray(value)) {
@@ -717,7 +736,15 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
     },
   ]
 
-  const pageSpecialties = keyFeatures.map((label) => ({ label, sub: '' }))
+  const pageSpecialties = keyFeatures.flatMap((label) => {
+    if (/<[a-z]/i.test(label)) {
+      const items = extractLiItems(label)
+      return items.length > 0
+        ? items.map((text) => ({ label: text, sub: '' }))
+        : [{ label: stripHtml(label), sub: '' }]
+    }
+    return [{ label, sub: '' }]
+  })
 
   const listingMapSrc =
     typeof listing.google_maps_link === 'string' && listing.google_maps_link.includes('output=embed')
@@ -936,7 +963,7 @@ export default function DetailedHotel({ slug }: { slug?: string }) {
                 {listing.feature_title || 'Our specialities'}
               </h2>
               <p className="text-gray-500 text-sm md:text-base mt-2">
-                {listing.details_title || listing.description?.split('. ')[0] || 'Discover what makes this hotel unique.'}
+                {listing.details_title || 'Discover what makes this hotel unique.'}
               </p>
               {/* Our Specialties */}
               {pageSpecialties.length > 0 && (

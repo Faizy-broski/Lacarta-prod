@@ -105,6 +105,19 @@ const features = [
   { icon: UtensilsCrossed, label: "Fitted Kitchen" },
 ];
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 function StarRow({ count, total = 5 }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -237,6 +250,7 @@ export default function RealEstateDetails({ slug }: { slug?: string }) {
     listing?.about ||
     listing?.details ||
     "This real estate listing provides key features and amenities to make your next move easier. Contact the agent for the latest availability and pricing.";
+  const descriptionText = stripHtml(description)
   const mapPosition =
     listing?.latitude && listing?.longitude
       ? [Number(listing.latitude), Number(listing.longitude)]
@@ -544,7 +558,7 @@ export default function RealEstateDetails({ slug }: { slug?: string }) {
                   </p>
 
                   <p className="text-xs md:text-sm text-gray-500 mt-1 leading-relaxed">
-                    {description}
+                    {descriptionText}
                   </p>
                 </div>
               </div>
