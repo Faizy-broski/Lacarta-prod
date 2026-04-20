@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { fetchTeamMemberBySlug } from '@/lib/services/team.service'
 
+export const dynamic = 'force-dynamic'
+
 interface Props {
   params: Promise<{ slug: string }>
 }
@@ -42,10 +44,10 @@ export default async function TeamMemberPage({ params }: Props) {
   ]
 
   const socials = [
-    { href: member.twitter_url,   label: 'X',         Icon: Twitter },
-    { href: member.linkedin_url,  label: 'LinkedIn',  Icon: Linkedin },
-    { href: member.instagram_url, label: 'Instagram', Icon: Instagram },
-    { href: member.email ? `mailto:${member.email}` : null, label: 'Email', Icon: Mail },
+    { href: member.twitter_url,   label: 'X',         Icon: Twitter,   activeClass: 'bg-[#1da1f2] text-white' },
+    { href: member.linkedin_url,  label: 'LinkedIn',  Icon: Linkedin,  activeClass: 'bg-[#0077b5] text-white' },
+    { href: member.instagram_url, label: 'Instagram', Icon: Instagram, activeClass: 'bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af] text-white' },
+    { href: member.email ? `mailto:${member.email}` : null, label: 'Email', Icon: Mail, activeClass: 'bg-[#333] text-white' },
   ]
 
   return (
@@ -64,7 +66,7 @@ export default async function TeamMemberPage({ params }: Props) {
       <div className='px-6 py-6 sm:px-10 lg:px-14'>
 
         {/* Photo + Favorites */}
-        <div className='flex flex-col sm:flex-row items-start'>
+        <div className='flex flex-col sm:flex-row items-start gap-8 lg:gap-10'>
 
           {/* Portrait photo */}
           <div className='w-full sm:w-[340px] lg:w-[400px] flex-shrink-0'>
@@ -82,28 +84,22 @@ export default async function TeamMemberPage({ params }: Props) {
           </div>
 
           {/* Favorites column */}
-          <div className='w-full sm:w-[300px] lg:w-[340px] flex-shrink-0 flex flex-col mt-4 sm:mt-0'>
+          <div className='w-full sm:w-[300px] lg:w-[340px] flex-shrink-0 flex flex-col mt-4 sm:mt-0 gap-3'>
             {favorites.map(({ label, value, bg, Icon }, i) => (
               <div
                 key={label}
-                className='flex items-center gap-3 px-5 py-5'
-                style={{
-                  backgroundColor: bg,
-                  borderRadius:
-                    i === 0
-                      ? '8px 8px 0 0'
-                      : i === favorites.length - 1
-                      ? '0 0 8px 8px'
-                      : '0',
-                }}
+                className='flex items-center gap-4 rounded-3xl px-6 py-6 shadow-sm'
+                style={{ backgroundColor: bg }}
               >
-                <Icon className='h-8 w-8 flex-shrink-0 text-black' strokeWidth={1.6} />
+                <Icon className='h-9 w-9 flex-shrink-0 text-black' strokeWidth={1.6} />
                 <div>
-                  <p className='font-antigua text-base font-black leading-tight text-black'>
+                  <p className='font-antigua text-lg sm:text-xl font-black leading-tight text-black'>
                     {label}
                   </p>
-                  {value && (
-                    <p className='mt-0.5 text-sm text-black/80'>{value}</p>
+                  {value ? (
+                    <p className='mt-1 text-base sm:text-lg font-semibold text-black/90'>{value}</p>
+                  ) : (
+                    <p className='mt-1 text-sm text-black/70'>Not provided</p>
                   )}
                 </div>
               </div>
@@ -117,12 +113,12 @@ export default async function TeamMemberPage({ params }: Props) {
             <h1 className='font-antigua text-4xl font-black leading-tight text-black sm:text-5xl'>
               {member.name}
             </h1>
-            <p className='mt-1 text-base text-muted-foreground'>{member.role}</p>
+            <p className='mt-1 text-base font-semibold text-muted-foreground'>{member.role}</p>
           </div>
 
-          {/* Always show all 4 icons — dimmed when no URL */}
+          {/* Always show all 4 icons — colored buttons with disabled fallback */}
           <div className='flex flex-shrink-0 items-center gap-4 pt-2'>
-            {socials.map(({ href, label, Icon }) =>
+            {socials.map(({ href, label, Icon, activeClass }) =>
               href ? (
                 <a
                   key={label}
@@ -130,13 +126,17 @@ export default async function TeamMemberPage({ params }: Props) {
                   target={href.startsWith('mailto') ? undefined : '_blank'}
                   rel={href.startsWith('mailto') ? undefined : 'noopener noreferrer'}
                   aria-label={label}
-                  className='text-black hover:opacity-60 transition-opacity'
+                  className={`inline-flex h-12 w-12 items-center justify-center rounded-full shadow-sm transition hover:opacity-90 ${activeClass}`}
                 >
-                  <Icon className='h-5 w-5' strokeWidth={1.8} />
+                  <Icon className='h-6 w-6' strokeWidth={1.8} />
                 </a>
               ) : (
-                <span key={label} className='text-black/20 cursor-default'>
-                  <Icon className='h-5 w-5' strokeWidth={1.8} />
+                <span
+                  key={label}
+                  className='inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 shadow-sm cursor-not-allowed'
+                  aria-label={`${label} unavailable`}
+                >
+                  <Icon className='h-6 w-6' strokeWidth={1.8} />
                 </span>
               )
             )}
